@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  activity_block.xml
+  The full-screen block overlay shown when a restricted app is opened.
+  File location: app/src/main/res/layout/activity_block.xml
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="40dp"
+    android:background="#0a0a0f">
+
+    <!-- Big emoji -->
+    <TextView
+        android:id="@+id/txt_emoji"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔒"
+        android:textSize="72sp"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Main title e.g. "Daily limit reached" -->
+    <TextView
+        android:id="@+id/txt_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Daily limit reached"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:textColor="#f0eeff"
+        android:gravity="center"
+        android:layout_marginBottom="14dp" />
+
+    <!-- Subtitle e.g. "Come back tomorrow" or "Come back at 2:45 PM" -->
+    <TextView
+        android:id="@+id/txt_subtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Come back tomorrow"
+        android:textSize="16sp"
+        android:textColor="#9990bb"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.4"
+        android:layout_marginBottom="56dp" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="48dp"
+        android:layout_height="1dp"
+        android:background="#2a2a38"
+        android:layout_marginBottom="56dp" />
+
+    <!-- Go to home screen button -->
+    <TextView
+        android:id="@+id/btn_go_home"
+        android:layout_width="200dp"
+        android:layout_height="52dp"
+        android:text="Go to Home Screen"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#c084fc"
+        android:gravity="center"
+        android:background="#c084fc22" />
+
+    <!-- Small note at bottom -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="FocusLock is keeping you on track"
+        android:textSize="11sp"
+        android:textColor="#2a2a38"
+        android:gravity="center"
+        android:layout_marginTop="40dp" />
+
+</LinearLayout>

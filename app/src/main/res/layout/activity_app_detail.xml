@@ -1,0 +1,778 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  activity_app_detail.xml
+  File location: app/src/main/res/layout/activity_app_detail.xml
+-->
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0a0a0f"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="32dp">
+
+        <!-- ══════════════════════════════════════════════════
+             HEADER
+        ══════════════════════════════════════════════════ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="20dp"
+            android:gravity="center_vertical">
+
+            <!-- Back button -->
+            <TextView
+                android:id="@+id/btn_back"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="‹"
+                android:textSize="24sp"
+                android:textColor="#9990bb"
+                android:gravity="center"
+                android:background="#1c1c26"
+                android:layout_marginEnd="14dp" />
+
+            <!-- App icon -->
+            <ImageView
+                android:id="@+id/img_app_icon"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:scaleType="fitCenter"
+                android:layout_marginEnd="12dp" />
+
+            <!-- App name + package -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/txt_app_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:textColor="#f0eeff" />
+
+                <TextView
+                    android:id="@+id/txt_package_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="11sp"
+                    android:textColor="#5a5475"
+                    android:layout_marginTop="2dp" />
+
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ══════════════════════════════════════════════════
+             SECTION 1 — RESTRICTION TOGGLE
+        ══════════════════════════════════════════════════ -->
+        <LinearLayout
+            android:id="@+id/section_restrict"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="4dp"
+            android:background="#13131a"
+            android:padding="16dp">
+
+            <!-- Section label -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="RESTRICTION"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:textColor="#5a5475"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Toggle row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Restrict this app"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="#f0eeff" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Enable all limits below"
+                        android:textSize="12sp"
+                        android:textColor="#5a5475"
+                        android:layout_marginTop="3dp" />
+
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_restrict"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                   />
+
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ══════════════════════════════════════════════════
+             SECTION 2 — SLEEP MODE
+        ══════════════════════════════════════════════════ -->
+        <LinearLayout
+            android:id="@+id/section_sleep"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="12dp"
+            android:background="#13131a"
+            android:padding="16dp">
+
+            <!-- Section label -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="SLEEP MODE"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08"
+                    android:textColor="#5a5475" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="optional"
+                    android:textSize="10sp"
+                    android:textColor="#5a5475" />
+
+            </LinearLayout>
+
+            <!-- Toggle row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Block during sleep hours"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="#f0eeff" />
+
+                    <TextView
+                        android:id="@+id/txt_sleep_summary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Off — no sleep block"
+                        android:textSize="12sp"
+                        android:textColor="#5a5475"
+                        android:layout_marginTop="3dp" />
+
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_sleep"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    />
+
+            </LinearLayout>
+
+            <!-- Sleep time pickers (hidden until toggle ON) -->
+            <LinearLayout
+                android:id="@+id/layout_sleep_times"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="14dp"
+                android:visibility="gone">
+
+                <!-- FROM row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:text="From"
+                        android:textSize="12sp"
+                        android:textColor="#5a5475" />
+
+                    <EditText
+                        android:id="@+id/input_from_hour"
+                        android:layout_width="56dp"
+                        android:layout_height="44dp"
+                        android:text="1"
+                        android:textSize="18sp"
+                        android:textColor="#f0eeff"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:inputType="number"
+                        android:maxLength="2" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=":"
+                        android:textSize="20sp"
+                        android:textColor="#5a5475"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp" />
+
+                    <EditText
+                        android:id="@+id/input_from_min"
+                        android:layout_width="56dp"
+                        android:layout_height="44dp"
+                        android:text="00"
+                        android:textSize="18sp"
+                        android:textColor="#f0eeff"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:inputType="number"
+                        android:maxLength="2" />
+
+                    <TextView
+                        android:id="@+id/btn_from_am"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:text="AM"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#c084fc"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:layout_marginStart="8dp"
+                        />
+
+                    <TextView
+                        android:id="@+id/btn_from_pm"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:text="PM"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#5a5475"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:layout_marginStart="6dp" />
+
+                </LinearLayout>
+
+                <!-- TO row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:text="Until"
+                        android:textSize="12sp"
+                        android:textColor="#5a5475" />
+
+                    <EditText
+                        android:id="@+id/input_to_hour"
+                        android:layout_width="56dp"
+                        android:layout_height="44dp"
+                        android:text="12"
+                        android:textSize="18sp"
+                        android:textColor="#f0eeff"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:inputType="number"
+                        android:maxLength="2" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=":"
+                        android:textSize="20sp"
+                        android:textColor="#5a5475"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp" />
+
+                    <EditText
+                        android:id="@+id/input_to_min"
+                        android:layout_width="56dp"
+                        android:layout_height="44dp"
+                        android:text="00"
+                        android:textSize="18sp"
+                        android:textColor="#f0eeff"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:inputType="number"
+                        android:maxLength="2" />
+
+                    <TextView
+                        android:id="@+id/btn_to_am"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:text="AM"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#5a5475"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:layout_marginStart="8dp" />
+
+                    <TextView
+                        android:id="@+id/btn_to_pm"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:text="PM"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#c084fc"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:layout_marginStart="6dp"
+                       />
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ══════════════════════════════════════════════════
+             SECTION 3 — DAILY TIME LIMIT
+        ══════════════════════════════════════════════════ -->
+        <LinearLayout
+            android:id="@+id/section_limit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="12dp"
+            android:background="#13131a"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DAILY TIME LIMIT"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:textColor="#5a5475"
+                android:layout_marginBottom="14dp" />
+
+            <!-- Hours + Minutes picker -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <!-- Hours -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal">
+
+                    <EditText
+                        android:id="@+id/input_hours"
+                        android:layout_width="80dp"
+                        android:layout_height="56dp"
+                        android:text="1"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="#f0eeff"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:inputType="number"
+                        android:maxLength="2" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="hours"
+                        android:textSize="12sp"
+                        android:textColor="#5a5475"
+                        android:layout_marginTop="6dp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=":"
+                    android:textSize="28sp"
+                    android:textColor="#5a5475"
+                    android:paddingBottom="16dp" />
+
+                <!-- Minutes -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal">
+
+                    <EditText
+                        android:id="@+id/input_minutes"
+                        android:layout_width="80dp"
+                        android:layout_height="56dp"
+                        android:text="00"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="#f0eeff"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:inputType="number"
+                        android:maxLength="2" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="minutes"
+                        android:textSize="12sp"
+                        android:textColor="#5a5475"
+                        android:layout_marginTop="6dp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ══════════════════════════════════════════════════
+             SECTION 4 — USAGE SESSIONS
+        ══════════════════════════════════════════════════ -->
+        <LinearLayout
+            android:id="@+id/section_slots"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="12dp"
+            android:background="#13131a"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="USAGE SESSIONS"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:textColor="#5a5475"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Split toggle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="14dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Split into sessions"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="#f0eeff" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Break daily limit into equal slots"
+                        android:textSize="12sp"
+                        android:textColor="#5a5475"
+                        android:layout_marginTop="3dp" />
+
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_split"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    />
+
+            </LinearLayout>
+
+            <!-- No-split note -->
+            <TextView
+                android:id="@+id/txt_no_split_note"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Continuous usage — full daily limit in one session."
+                android:textSize="13sp"
+                android:textColor="#5a5475"
+                android:visibility="visible" />
+
+            <!-- Split config (hidden until toggle ON) -->
+            <LinearLayout
+                android:id="@+id/layout_split_config"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Number of sessions per day"
+                    android:textSize="12sp"
+                    android:textColor="#5a5475"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- Slot buttons: 2 3 4 5 6 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:id="@+id/btn_slot_2"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:text="2"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="#9990bb"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/btn_slot_3"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:text="3"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="#9990bb"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/btn_slot_4"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:text="4"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="#c084fc"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:layout_marginEnd="6dp"
+                        />
+
+                    <TextView
+                        android:id="@+id/btn_slot_5"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:text="5"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="#9990bb"
+                        android:gravity="center"
+                        android:background="#1c1c26"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/btn_slot_6"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:text="6"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="#9990bb"
+                        android:gravity="center"
+                        android:background="#1c1c26" />
+
+                </LinearLayout>
+
+                <!-- Slot preview text -->
+                <TextView
+                    android:id="@+id/txt_slot_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="#9990bb"
+                    android:background="#1c1c26"
+                    android:padding="12dp"
+                    android:layout_marginBottom="16dp"
+                    android:lineSpacingMultiplier="1.4" />
+
+                <!-- Cooldown section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cooldown between sessions"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#f0eeff"
+                    android:layout_marginBottom="10dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Block duration after each slot ends"
+                        android:textSize="12sp"
+                        android:textColor="#5a5475" />
+
+                    <TextView
+                        android:id="@+id/txt_cooldown_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="40 min"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#c084fc" />
+
+                </LinearLayout>
+
+                <!-- Seekbar: 0=40min → 260=300min -->
+                <SeekBar
+                    android:id="@+id/seekbar_cooldown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="260"
+                    android:progress="0" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="14dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="40 min"
+                        android:textSize="10sp"
+                        android:textColor="#5a5475" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="5 hr"
+                        android:textSize="10sp"
+                        android:textColor="#5a5475" />
+
+                </LinearLayout>
+
+                <!-- Warning chip -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="#fbbf2411"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="⚠"
+                        android:textSize="13sp"
+                        android:textColor="#fbbf24"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Closing the app early still counts the full slot as used. Cooldown starts immediately."
+                        android:textSize="12sp"
+                        android:textColor="#fbbf24"
+                        android:lineSpacingMultiplier="1.4" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ══════════════════════════════════════════════════
+             SAVE BUTTON
+        ══════════════════════════════════════════════════ -->
+        <TextView
+            android:id="@+id/btn_save"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="20dp"
+            android:text="Save Settings"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:gravity="center"
+            android:background="#a855f7" />
+
+    </LinearLayout>
+</ScrollView>
