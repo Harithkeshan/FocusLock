@@ -189,6 +189,76 @@
                 android:layout_marginTop="10dp" />
 
         </LinearLayout>
+        <!-- ── Permission 3: Accessibility ──────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#13131a"
+            android:padding="18dp"
+            android:layout_marginBottom="32dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="♿"
+                    android:textSize="22sp"
+                    android:layout_marginEnd="12dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Accessibility Access"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="#f0eeff" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Detects which app is open"
+                        android:textSize="12sp"
+                        android:textColor="#5a5475"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txt_accessibility_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Not granted"
+                    android:textSize="12sp"
+                    android:textColor="#f87171" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/btn_grant_accessibility"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:text="Grant Accessibility Access →"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#c084fc"
+                android:gravity="center"
+                android:background="#c084fc22"
+                android:layout_marginTop="10dp" />
+
+        </LinearLayout>
 
         <!-- Continue button -->
         <TextView

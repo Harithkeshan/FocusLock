@@ -37,7 +37,7 @@ public class AppListActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (!hasUsageAccess() || !hasOverlayPermission()) {
+        if (!hasUsageAccess() || !hasOverlayPermission() || !hasAccessibilityPermission()) {
             startActivity(new Intent(this, PermissionActivity.class));
             finish();
             return;
@@ -152,5 +152,32 @@ public class AppListActivity extends AppCompatActivity {
             return Settings.canDrawOverlays(this);
         }
         return true;
+    }
+
+    private boolean hasAccessibilityPermission() {
+        try {
+            String services = android.provider.Settings.Secure.getString(
+                    getContentResolver(),
+                    android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+
+            if (services == null || services.isEmpty()) return false;
+
+            // Check case-insensitively and handle both / and . separators
+            String target = getPackageName().toLowerCase() +
+                    "/com.harithdev.focuslock.service.focuslockaccessibilityservice";
+
+            for (String service : services.split(":")) {
+                if (service.toLowerCase().replace("/.", "/").equals(target)) {
+                    return true;
+                }
+                // Also check simplified format
+                if (service.toLowerCase().contains("focuslockaccessibilityservice")) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

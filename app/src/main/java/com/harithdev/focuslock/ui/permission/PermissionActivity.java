@@ -49,7 +49,7 @@ public class PermissionActivity extends AppCompatActivity {
         refreshUI();
 
         // If both permissions are now granted → proceed
-        if (hasUsageAccess() && hasOverlayPermission()) {
+        if (hasUsageAccess() && hasOverlayPermission() && hasAccessibilityPermission()) {
             proceedToApp();
         }
     }
@@ -73,8 +73,13 @@ public class PermissionActivity extends AppCompatActivity {
         binding.btnGrantOverlay.setEnabled(!overlayOk);
 
         // Continue button — only enabled when both are granted
-        binding.btnContinue.setAlpha((usageOk && overlayOk) ? 1.0f : 0.4f);
-        binding.btnContinue.setEnabled(usageOk && overlayOk);
+        boolean accessibilityOk = hasAccessibilityPermission();
+        binding.txtAccessibilityStatus.setText(accessibilityOk ? "✓  Granted" : "Not granted");
+        binding.txtAccessibilityStatus.setTextColor(accessibilityOk ? 0xFF4ADE80 : 0xFFF87171);
+        binding.btnGrantAccessibility.setAlpha(accessibilityOk ? 0.4f : 1.0f);
+        binding.btnGrantAccessibility.setEnabled(!accessibilityOk);
+        binding.btnContinue.setAlpha((usageOk && overlayOk && accessibilityOk) ? 1.0f : 0.4f);
+        binding.btnContinue.setEnabled(usageOk && overlayOk && accessibilityOk);
     }
 
     // ── Button listeners ──────────────────────────────────────
@@ -100,6 +105,11 @@ public class PermissionActivity extends AppCompatActivity {
 
         // Continue → start service + go to app list
         binding.btnContinue.setOnClickListener(v -> proceedToApp());
+
+        binding.btnGrantAccessibility.setOnClickListener(v -> {
+            Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            startActivity(intent);
+        });
     }
 
     // ── Proceed ───────────────────────────────────────────────
@@ -150,5 +160,32 @@ public class PermissionActivity extends AppCompatActivity {
             return Settings.canDrawOverlays(this);
         }
         return true; // Granted by default on older Android versions
+    }
+
+    private boolean hasAccessibilityPermission() {
+        try {
+            String services = android.provider.Settings.Secure.getString(
+                    getContentResolver(),
+                    android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+
+            if (services == null || services.isEmpty()) return false;
+
+            // Check case-insensitively and handle both / and . separators
+            String target = getPackageName().toLowerCase() +
+                    "/com.harithdev.focuslock.service.focuslockaccessibilityservice";
+
+            for (String service : services.split(":")) {
+                if (service.toLowerCase().replace("/.", "/").equals(target)) {
+                    return true;
+                }
+                // Also check simplified format
+                if (service.toLowerCase().contains("focuslockaccessibilityservice")) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

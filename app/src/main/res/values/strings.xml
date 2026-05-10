@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">FocusLock</string>
+    <string name="accessibility_description">FocusLock needs accessibility access to detect which app is open and enforce your time limits.</string>
 </resources>
