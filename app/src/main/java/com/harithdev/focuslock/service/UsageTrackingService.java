@@ -82,68 +82,106 @@ public class UsageTrackingService extends Service {
     private void performCheck() {
         Log.d(TAG, "🔄 performCheck() running...");
 
-        // ── Step 1: Check if UsageStats permission is granted ─
-        UsageStatsManager usm = (UsageStatsManager)
-                getSystemService(Context.USAGE_STATS_SERVICE);
-        if (usm == null) {
-            Log.e(TAG, "❌ UsageStatsManager is null");
-            return;
-        }
+        // ── Step 1: Identify Foreground App ──
+        // Prioritize real-time Accessibility Service detection
+        String foreground = FocusLockAccessibilityService.currentForegroundApp;
+        long   lastUpdate = FocusLockAccessibilityService.lastEventTime;
+        long   now        = System.currentTimeMillis();
 
-        // ── Step 2: Query all apps used in the last 10 seconds ─
-        long now  = System.currentTimeMillis();
-        long past = now - 10_000;
-
-        List<UsageStats> stats = usm.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY, past, now);
-
-        if (stats == null || stats.isEmpty()) {
-            Log.w(TAG, "⚠️ No usage stats returned — permission may not be granted");
-            return;
-        }
-
-        // ── Step 3: Find the most recently used app ───────────
-        String foreground = getForegroundApp();
-        long   lastTime   = 0;
-
-        for (UsageStats s : stats) {
-            Log.d(TAG, "  📱 " + s.getPackageName()
-                    + " lastUsed=" + (now - s.getLastTimeUsed()) + "ms ago");
-
-            if (s.getPackageName().equals(getPackageName())) continue;
-            if (now - s.getLastTimeUsed() > 10_000) continue;
-
-            if (s.getLastTimeUsed() > lastTime) {
-                lastTime   = s.getLastTimeUsed();
-                foreground = s.getPackageName();
-            }
+        // If Accessibility data is older than 5 seconds, it might be stale
+        // or the service might be dead/idle. Fall back to UsageStats.
+        if (foreground == null || (now - lastUpdate) > 5_000) {
+            Log.d(TAG, "⚠️ Accessibility stale or null, falling back to UsageStats");
+            foreground = getForegroundAppFromStats();
         }
 
         if (foreground == null) {
-            Log.d(TAG, "⚠️ No foreground app detected in last 10 seconds");
+            Log.d(TAG, "⚠️ No foreground app detected");
             return;
         }
 
         Log.d(TAG, "👁️ Foreground app: " + foreground);
 
-        // ── Step 4: Check against restrictions ────────────────
-        List<AppRestriction> restrictions =
-                db.appRestrictionDao().getActiveRestrictions();
+        // ── Step 2: Handle Session Transitions ──
+        // Ensure that any app previously marked as "active" is closed if it's no longer in the foreground.
+        handleAppSwitch(foreground);
 
-        Log.d(TAG, "📋 Active restrictions count: " + restrictions.size());
-
-        for (AppRestriction r : restrictions) {
-            Log.d(TAG, "  🔒 Restricted: " + r.packageName);
-        }
-
-        for (AppRestriction restriction : restrictions) {
-            if (!restriction.packageName.equals(foreground)) continue;
-            Log.d(TAG, "✅ Match found! Handling: " + foreground);
-            handleRestrictedApp(restriction);
+        // ── Step 3: Skip Safe Apps (FocusLock, Launchers, System UI) ──
+        if (isSafeApp(foreground)) {
+            Log.d(TAG, "✅ " + foreground + " is a safe app — skipping block logic");
             return;
         }
 
+        // ── Step 4: Check Against Active Restrictions ──
+        List<AppRestriction> restrictions = db.appRestrictionDao().getActiveRestrictions();
+        for (AppRestriction restriction : restrictions) {
+            if (restriction.packageName.equals(foreground)) {
+                Log.d(TAG, "✅ Match found! Handling: " + foreground);
+                handleRestrictedApp(restriction);
+                return;
+            }
+        }
+
         Log.d(TAG, "✅ " + foreground + " is not restricted — no action");
+    }
+
+    /**
+     * Called when the foreground app is NOT a restricted app.
+     * We check if there's any app currently marked as 'inActiveSession'
+     * and close that session since the user moved away.
+     */
+    private void handleAppSwitch(String currentPkg) {
+        // We are already in a background thread here (called from performCheck)
+        DailyUsage activeUsage = db.dailyUsageDao().getActiveUsage(TimeUtils.todayString());
+        if (activeUsage != null && !activeUsage.packageName.equals(currentPkg)) {
+            Log.d(TAG, "💾 Closing session for " + activeUsage.packageName + " because user moved to " + currentPkg);
+            activeUsage.inActiveSession = false;
+            db.dailyUsageDao().update(activeUsage);
+        }
+    }
+
+    private String getForegroundAppFromStats() {
+        UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
+        if (usm == null) return null;
+
+        long now = System.currentTimeMillis();
+        long past = now - 15_000; // Look back 15 seconds
+
+        List<UsageStats> stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, past, now);
+        if (stats == null || stats.isEmpty()) return null;
+
+        String bestPkg = null;
+        long lastTime = 0;
+
+        for (UsageStats s : stats) {
+            // We DO NOT skip our own app here. If FocusLock is the most recent,
+            // we should identify it as foreground so the block logic skips it.
+            if (s.getLastTimeUsed() > lastTime) {
+                lastTime = s.getLastTimeUsed();
+                bestPkg = s.getPackageName();
+            }
+        }
+        return bestPkg;
+    }
+
+    private boolean isSafeApp(String pkg) {
+        if (pkg == null) return true;
+
+        // 1. FocusLock itself
+        if (pkg.startsWith("com.harithdev.focuslock")) return true;
+
+        // 2. System components
+        if (pkg.equals("android") || pkg.equals("com.android.systemui")) return true;
+
+        // 3. Launchers / Home apps
+        String lowerPkg = pkg.toLowerCase();
+        if (lowerPkg.contains("launcher") || lowerPkg.contains("home") || lowerPkg.contains("shell")) return true;
+
+        // Specific OEM launchers and plugins
+        if (pkg.equals("com.miui.home") || pkg.equals("com.miui.systemui.plugin") ||
+                pkg.equals("miui.systemui.plugin") || pkg.equals("com.sec.android.app.launcher")) return true;
+
+        return false;
     }
 
     private void handleRestrictedApp(AppRestriction restriction) {
@@ -231,21 +269,10 @@ public class UsageTrackingService extends Service {
         intent.putExtra(BlockActivity.EXTRA_REASON,          reason);
         intent.putExtra(BlockActivity.EXTRA_SLEEP_END,       sleepEndTime);
         intent.putExtra(BlockActivity.EXTRA_COOLDOWN_END_MS, cooldownEndsAtMs);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
     }
 
-    // ── Get foreground app ────────────────────────────────────
-
-    private String getForegroundApp() {
-        String pkg = FocusLockAccessibilityService.currentForegroundApp;
-        if (pkg != null && !pkg.equals(getPackageName())) {
-            Log.d(TAG, "✅ Accessibility detected: " + pkg);
-            return pkg;
-        }
-        Log.w(TAG, "⚠️ No foreground app from accessibility service");
-        return null;
-    }
 
     // ── Notification ──────────────────────────────────────────
 

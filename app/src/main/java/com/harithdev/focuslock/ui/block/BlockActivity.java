@@ -69,6 +69,17 @@ public class BlockActivity extends Activity {
         binding.btnGoHome.setOnClickListener(v -> goHome());
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // If the user somehow navigated back to FocusLock's main screens,
+        // we should finish this block activity so it doesn't stay on top.
+        // We can't easily check 'currentForegroundApp' here because it will be
+        // com.harithdev.focuslock (which is US). 
+        // However, if this activity is being resumed, we should check if 
+        // the app we are supposed to block is still the one in "active session".
+    }
+
     // ── UI setup ──────────────────────────────────────────────
 
     private void setupUI(String reason, String sleepEnd, long cooldownEndsMs) {
@@ -157,5 +168,7 @@ public class BlockActivity extends Activity {
         home.addCategory(Intent.CATEGORY_HOME);
         home.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(home);
+        // Finish this activity so it doesn't linger in the task/recents
+        finish();
     }
 }

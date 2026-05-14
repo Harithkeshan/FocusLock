@@ -49,6 +49,13 @@ public interface DailyUsageDao {
     DailyUsage getUsage(String packageName, String date);
 
     /**
+     * Finds any app that currently has an active session for today.
+     * There should ideally only be one.
+     */
+    @Query("SELECT * FROM daily_usage WHERE date = :date AND inActiveSession = 1 LIMIT 1")
+    DailyUsage getActiveUsage(String date);
+
+    /**
      * Delete all usage records older than today.
      * Called by MidnightResetWorker to keep the DB clean.
      *

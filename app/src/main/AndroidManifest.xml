@@ -48,7 +48,11 @@
             android:exported="false"
             android:showOnLockScreen="true"
             android:turnScreenOn="true"
-            android:theme="@style/Theme.FocusLock" />
+            android:theme="@style/Theme.FocusLock"
+            android:taskAffinity="com.harithdev.focuslock.blocker"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleInstance" />
 
         <service
             android:name=".service.UsageTrackingService"
