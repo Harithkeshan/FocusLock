@@ -15,6 +15,13 @@ import com.harithdev.focuslock.util.TimeUtils;
 
 import java.util.Locale;
 
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
+import android.content.Context;
+import java.util.Calendar;
+import java.util.List;
+import com.harithdev.focuslock.model.DailyUsage;
+
 /**
  * AppDetailActivity — Step 3
  *
@@ -61,6 +68,7 @@ public class AppDetailActivity extends AppCompatActivity {
         setupHeader();
         setupClickListeners();
         loadExistingSettings();
+        loadTodayUsage();
     }
 
     // ── Header ────────────────────────────────────────────────
@@ -385,6 +393,23 @@ public class AppDetailActivity extends AppCompatActivity {
 
         // Save to DB on background thread
         AsyncTask.execute(() -> {
+            // Store today's already-used time so enforcement is accurate
+            if (restriction.isRestricted) {
+                String today = TimeUtils.todayString();
+                DailyUsage usage = db.dailyUsageDao().getUsage(packageName, today);
+                if (usage == null) {
+                    usage = new DailyUsage(packageName, today);
+                    db.dailyUsageDao().insert(usage);
+                }
+                // Convert system usage to sessions already consumed
+                long usedMs      = getSystemUsageToday(packageName);
+                long slotMs      = restriction.getSlotDurationMinutes() * 60_000L;
+                int slotsUsed    = (int)(usedMs / slotMs);
+                // Cap at max sessions
+                int maxSessions  = restriction.splitSessions ? restriction.sessionCount : 1;
+                usage.sessionsUsedToday = Math.min(slotsUsed, maxSessions);
+                db.dailyUsageDao().update(usage);
+            }
             db.appRestrictionDao().insert(restriction); // REPLACE if exists
             runOnUiThread(() -> {
                 Toast.makeText(this, "Settings saved ✓", Toast.LENGTH_SHORT).show();
@@ -433,5 +458,62 @@ public class AppDetailActivity extends AppCompatActivity {
     private String getFieldText(android.widget.EditText field, String defaultVal) {
         String text = field.getText().toString().trim();
         return text.isEmpty() ? defaultVal : text;
+    }
+
+    private void loadTodayUsage() {
+        AsyncTask.execute(() -> {
+            long usedMs = getSystemUsageToday(packageName);
+            runOnUiThread(() -> {
+                if (usedMs <= 0) {
+                    binding.txtUsageToday.setText("📊 Used today: none");
+                    return;
+                }
+                long totalMins = usedMs / 60_000;
+                long hours     = totalMins / 60;
+                long mins      = totalMins % 60;
+
+                String display;
+                if (hours > 0) {
+                    display = hours + "h " + mins + "m";
+                } else {
+                    display = mins + " min";
+                }
+                binding.txtUsageToday.setText("📊 Used today: " + display);
+            });
+        });
+    }
+
+    private long getSystemUsageToday(String packageName) {
+        try {
+            UsageStatsManager usm = (UsageStatsManager)
+                    getSystemService(Context.USAGE_STATS_SERVICE);
+            if (usm == null) return 0;
+
+            Calendar midnight = Calendar.getInstance();
+            midnight.set(Calendar.HOUR_OF_DAY, 0);
+            midnight.set(Calendar.MINUTE, 0);
+            midnight.set(Calendar.SECOND, 0);
+            midnight.set(Calendar.MILLISECOND, 0);
+
+            List<UsageStats> stats = usm.queryUsageStats(
+                    UsageStatsManager.INTERVAL_DAILY,
+                    midnight.getTimeInMillis(),
+                    System.currentTimeMillis());
+
+            if (stats == null) return 0;
+
+            for (UsageStats s : stats) {
+                if (s.getPackageName().equals(packageName)) {
+                    return s.getTotalTimeInForeground();
+                }
+            }
+        } catch (Exception e) { return 0; }
+        return 0;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadTodayUsage();
     }
 }

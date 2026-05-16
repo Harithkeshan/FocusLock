@@ -69,6 +69,21 @@
                     android:textColor="#5a5475"
                     android:layout_marginTop="2dp" />
 
+                <!-- Today's usage chip -->
+                <TextView
+                    android:id="@+id/txt_usage_today"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📊 Used today: calculating..."
+                    android:textSize="11sp"
+                    android:textColor="#c084fc"
+                    android:background="#c084fc22"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:layout_marginTop="6dp" />
+
             </LinearLayout>
         </LinearLayout>
 
