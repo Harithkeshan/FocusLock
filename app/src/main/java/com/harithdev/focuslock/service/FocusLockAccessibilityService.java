@@ -116,6 +116,14 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         DailyUsage activeUsage = db.dailyUsageDao().getActiveUsage(TimeUtils.todayString());
         if (activeUsage != null && !activeUsage.packageName.equals(currentPkg)) {
             Log.d(TAG, "💾 Accessibility: Closing session for " + activeUsage.packageName);
+            
+            // Start Cooldown when app is closed early
+            AppRestriction restriction = db.appRestrictionDao().getByPackageName(activeUsage.packageName);
+            if (restriction != null && activeUsage.inActiveSession) {
+                activeUsage.inCooldown = true;
+                activeUsage.cooldownEndsAtMs = System.currentTimeMillis() + (restriction.cooldownMinutes * 60_000L);
+            }
+
             activeUsage.inActiveSession = false;
             db.dailyUsageDao().update(activeUsage);
         }

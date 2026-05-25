@@ -24,14 +24,12 @@ import com.harithdev.focuslock.model.DailyUsage;
 
 /**
  * AppDetailActivity — Step 3
- *
  * The full settings screen for a single app.
  * Sections:
  *   1. Restrict on/off
  *   2. Sleep mode (optional) — pick start/end time
  *   3. Daily time limit — pick hours + minutes
  *   4. Usage sessions — split into slots + cooldown
- *
  * File location:
  *   app/src/main/java/com/harithdev/focuslock/ui/detail/AppDetailActivity.java
  */
@@ -404,10 +402,18 @@ public class AppDetailActivity extends AppCompatActivity {
                 // Convert system usage to sessions already consumed
                 long usedMs      = getSystemUsageToday(packageName);
                 long slotMs      = restriction.getSlotDurationMinutes() * 60_000L;
+                long dailyLimitMs = restriction.dailyLimitMinutes * 60_000L;
+
                 int slotsUsed    = (int)(usedMs / slotMs);
-                // Cap at max sessions
                 int maxSessions  = restriction.splitSessions ? restriction.sessionCount : 1;
-                usage.sessionsUsedToday = Math.min(slotsUsed, maxSessions);
+
+                // BUG 1 Fix: Cap used sessions to (max - 1) if overall daily limit isn't fully reached.
+                // This prevents "Daily limit reached" message when just a slot ended on some devices (MIUI).
+                if (usedMs < dailyLimitMs) {
+                    usage.sessionsUsedToday = Math.min(slotsUsed, maxSessions - 1);
+                } else {
+                    usage.sessionsUsedToday = maxSessions;
+                }
                 db.dailyUsageDao().update(usage);
             }
             db.appRestrictionDao().insert(restriction); // REPLACE if exists
@@ -478,7 +484,7 @@ public class AppDetailActivity extends AppCompatActivity {
                 } else {
                     display = mins + " min";
                 }
-                binding.txtUsageToday.setText("📊 Used today: " + display);
+                binding.txtUsageToday.setText("📊 Used today: ~" + display);
             });
         });
     }
@@ -496,7 +502,7 @@ public class AppDetailActivity extends AppCompatActivity {
             midnight.set(Calendar.MILLISECOND, 0);
 
             List<UsageStats> stats = usm.queryUsageStats(
-                    UsageStatsManager.INTERVAL_DAILY,
+                    UsageStatsManager.INTERVAL_BEST,
                     midnight.getTimeInMillis(),
                     System.currentTimeMillis());
 
