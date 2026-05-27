@@ -501,15 +501,15 @@ public class AppDetailActivity extends AppCompatActivity {
             midnight.set(Calendar.SECOND, 0);
             midnight.set(Calendar.MILLISECOND, 0);
 
-            List<UsageStats> stats = usm.queryUsageStats(
-                    UsageStatsManager.INTERVAL_BEST,
+            // Use queryAndAggregateUsageStats to get a precise sum for today's range.
+            // This prevents using stale 'Daily' buckets that might include yesterday's time.
+            java.util.Map<String, UsageStats> statsMap = usm.queryAndAggregateUsageStats(
                     midnight.getTimeInMillis(),
                     System.currentTimeMillis());
 
-            if (stats == null) return 0;
-
-            for (UsageStats s : stats) {
-                if (s.getPackageName().equals(packageName)) {
+            if (statsMap != null && statsMap.containsKey(packageName)) {
+                UsageStats s = statsMap.get(packageName);
+                if (s != null) {
                     return s.getTotalTimeInForeground();
                 }
             }
