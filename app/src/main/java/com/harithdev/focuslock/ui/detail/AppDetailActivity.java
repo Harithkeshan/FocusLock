@@ -15,7 +15,7 @@ import com.harithdev.focuslock.util.TimeUtils;
 
 import java.util.Locale;
 
-import android.app.usage.UsageStats;
+import android.app.usage.UsageEvents;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import java.util.Calendar;
@@ -501,20 +501,45 @@ public class AppDetailActivity extends AppCompatActivity {
             midnight.set(Calendar.SECOND, 0);
             midnight.set(Calendar.MILLISECOND, 0);
 
-            // Use queryAndAggregateUsageStats to get a precise sum for today's range.
-            // This prevents using stale 'Daily' buckets that might include yesterday's time.
-            java.util.Map<String, UsageStats> statsMap = usm.queryAndAggregateUsageStats(
-                    midnight.getTimeInMillis(),
-                    System.currentTimeMillis());
+            long startTime = midnight.getTimeInMillis();
+            long endTime   = System.currentTimeMillis();
 
-            if (statsMap != null && statsMap.containsKey(packageName)) {
-                UsageStats s = statsMap.get(packageName);
-                if (s != null) {
-                    return s.getTotalTimeInForeground();
+            // queryEvents is the most accurate way to match Digital Wellbeing.
+            // We manually sum the durations between ACTIVITY_RESUMED (10) and ACTIVITY_PAUSED (11).
+            UsageEvents events = usm.queryEvents(startTime, endTime);
+            UsageEvents.Event event = new UsageEvents.Event();
+
+            long totalTimeMs = 0;
+            long lastResumedTime = 0;
+
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event);
+                if (event.getPackageName().equals(packageName)) {
+                    int type = event.getEventType();
+
+                    // 10 = ACTIVITY_RESUMED, 11 = ACTIVITY_PAUSED
+                    // This avoids including "Foreground Services" (Type 19/20) which often 
+                    // inflate usage time on apps like Facebook or Instagram.
+                    if (type == 10) {
+                        lastResumedTime = event.getTimeStamp();
+                    } else if (type == 11) {
+                        if (lastResumedTime > 0) {
+                            totalTimeMs += (event.getTimeStamp() - lastResumedTime);
+                            lastResumedTime = 0;
+                        }
+                    }
                 }
             }
-        } catch (Exception e) { return 0; }
-        return 0;
+
+            // If the app is currently open, add the time since it was last resumed
+            if (lastResumedTime > 0) {
+                totalTimeMs += (endTime - lastResumedTime);
+            }
+
+            return totalTimeMs;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     @Override
