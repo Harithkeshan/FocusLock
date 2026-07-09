@@ -74,8 +74,11 @@ public interface DailyUsageDao {
             "sessionsUsedToday = 0, " +
             "inActiveSession = 0, " +
             "sessionStartTimeMs = 0, " +
+            "totalUsedMs = 0, " +
+            "currentSessionUsedMs = 0, " +
             "inCooldown = 0, " +
             "cooldownEndsAtMs = 0, " +
+            "isEarlyExitCooldown = 0, " +
             "inSleepBlock = 0 " +
             "WHERE date = :today")
     void resetAllForDate(String today);

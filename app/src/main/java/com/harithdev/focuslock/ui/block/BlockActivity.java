@@ -11,38 +11,48 @@ import com.harithdev.focuslock.databinding.ActivityBlockBinding;
 import com.harithdev.focuslock.util.TimeUtils;
 
 /**
- * BlockActivity — Step 4 (part 2)
+ * BlockActivity — full-screen block overlay.
  *
- * Full-screen overlay shown when a blocked app is opened.
- * Displays one of three messages depending on the reason:
+ * Shown whenever a restricted app is opened and a rule is triggered.
+ * Displays one of FIVE unique messages depending on exactly why the
+ * app was blocked:
  *
- *   REASON_SLEEP    → "Sleeping time now. Come back at [time]"
- *   REASON_COOLDOWN → "Session ended. Come back at [time]"
- *   REASON_LIMIT    → "Daily limit reached. Come back tomorrow."
- *
- * This activity sits ON TOP of the blocked app.
- * The user can only dismiss it by pressing the Home button.
+ *   REASON_SLEEP            → 🌙  Sleep hours — "Sleep hours, phone down!"
+ *   REASON_SESSION_TIMEOUT  → ⏰  Slot ran out — "Time's up for this session!"
+ *   REASON_EARLY_EXIT       → 🧘  Left mid-session — "Good call stepping away!"
+ *   REASON_LIMIT            → 🔒  Daily cap hit — "That's your daily dose!"
+ *   REASON_ALL_SESSIONS     → 🏁  All slots done — "All [N] sessions done!"
  *
  * File location:
  *   app/src/main/java/com/harithdev/focuslock/ui/block/BlockActivity.java
  */
 public class BlockActivity extends Activity {
 
-    // Intent extras — used to pass data from UsageTrackingService
+    // ── Intent extras ─────────────────────────────────────────
     public static final String EXTRA_PACKAGE         = "extra_package";
     public static final String EXTRA_REASON          = "extra_reason";
     public static final String EXTRA_SLEEP_END       = "extra_sleep_end";
     public static final String EXTRA_COOLDOWN_END_MS = "extra_cooldown_end_ms";
+    public static final String EXTRA_SESSION_COUNT   = "extra_session_count";   // for "All N sessions done"
 
-    // Block reasons
-    public static final String REASON_SLEEP    = "sleep";
-    public static final String REASON_COOLDOWN = "cooldown";
-    public static final String REASON_LIMIT    = "limit";
+    // ── Block reasons ─────────────────────────────────────────
+    /** Blocked because we're inside the user's sleep window */
+    public static final String REASON_SLEEP           = "sleep";
+
+    /** Blocked because the session slot ran out from continuous use (Behaviour 1) */
+    public static final String REASON_SESSION_TIMEOUT = "session_timeout";
+
+    /** Blocked because the user exited the app mid-session (Behaviour 2) */
+    public static final String REASON_EARLY_EXIT      = "early_exit";
+
+    /** Blocked because total daily screen time hit the daily limit (no sessions mode) */
+    public static final String REASON_LIMIT           = "limit";
+
+    /** Blocked because all session slots for the day have been used up */
+    public static final String REASON_ALL_SESSIONS    = "all_sessions";
 
     private ActivityBlockBinding binding;
-
-    // Re-check every 60 seconds — dismiss if block has lifted
-    private Handler  handler    = new Handler(Looper.getMainLooper());
+    private Handler  handler = new Handler(Looper.getMainLooper());
     private Runnable recheck;
 
     @Override
@@ -58,52 +68,85 @@ public class BlockActivity extends Activity {
                         WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
         );
 
-        String reason          = getIntent().getStringExtra(EXTRA_REASON);
-        String sleepEnd        = getIntent().getStringExtra(EXTRA_SLEEP_END);
-        long   cooldownEndsMs  = getIntent().getLongExtra(EXTRA_COOLDOWN_END_MS, 0);
+        String reason         = getIntent().getStringExtra(EXTRA_REASON);
+        String sleepEnd       = getIntent().getStringExtra(EXTRA_SLEEP_END);
+        long   cooldownEndsMs = getIntent().getLongExtra(EXTRA_COOLDOWN_END_MS, 0);
+        int    sessionCount   = getIntent().getIntExtra(EXTRA_SESSION_COUNT, 0);
 
-        setupUI(reason, sleepEnd, cooldownEndsMs);
+        setupUI(reason, sleepEnd, cooldownEndsMs, sessionCount);
         startRecheckLoop(reason, cooldownEndsMs);
 
-        // Go home button — sends user to home screen
         binding.btnGoHome.setOnClickListener(v -> goHome());
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // If the user somehow navigated back to FocusLock's main screens,
-        // we should finish this block activity so it doesn't stay on top.
-        // We can't easily check 'currentForegroundApp' here because it will be
-        // com.harithdev.focuslock (which is US). 
-        // However, if this activity is being resumed, we should check if 
-        // the app we are supposed to block is still the one in "active session".
     }
 
     // ── UI setup ──────────────────────────────────────────────
 
-    private void setupUI(String reason, String sleepEnd, long cooldownEndsMs) {
+    private void setupUI(String reason, String sleepEnd,
+                         long cooldownEndsMs, int sessionCount) {
         switch (reason != null ? reason : "") {
 
+            // ─── 1. SLEEP MODE ────────────────────────────────
             case REASON_SLEEP:
                 binding.txtEmoji.setText("🌙");
-                binding.txtTitle.setText("Sleeping time now");
+                binding.txtTitle.setText("Sleep hours, phone down!");
                 binding.txtSubtitle.setText(
-                        "Come back at " + TimeUtils.formatSleepEndTime(sleepEnd != null ? sleepEnd : ""));
+                        "You set this time aside for rest.\n"
+                        + "Come back at " + TimeUtils.formatSleepEndTime(sleepEnd != null ? sleepEnd : "")
+                );
                 break;
 
-            case REASON_COOLDOWN:
-                binding.txtEmoji.setText("⏳");
-                binding.txtTitle.setText("Session ended");
+            // ─── 2. SESSION TIMED OUT (Behaviour 1) ──────────
+            // User continuously used the app until their slot ran out
+            case REASON_SESSION_TIMEOUT:
+                binding.txtEmoji.setText("⏰");
+                binding.txtTitle.setText("Time's up for this session!");
                 binding.txtSubtitle.setText(
-                        "Come back at " + TimeUtils.formatCooldownEnd(cooldownEndsMs));
+                        "You used your full slot — great discipline!\n"
+                        + "Cooldown ends at " + TimeUtils.formatCooldownEnd(cooldownEndsMs)
+                );
                 break;
 
+            // ─── 3. EARLY EXIT COOLDOWN (Behaviour 2) ────────
+            // User left the app mid-session; that still counts as a session
+            case REASON_EARLY_EXIT:
+                binding.txtEmoji.setText("🧘");
+                binding.txtTitle.setText("Good call stepping away!");
+                binding.txtSubtitle.setText(
+                        "Leaving early still uses your session.\n"
+                        + "Cooldown ends at " + TimeUtils.formatCooldownEnd(cooldownEndsMs)
+                );
+                break;
+
+            // ─── 4. DAILY LIMIT REACHED (no sessions mode) ───
+            // Cumulative screen time for the day has hit the cap
             case REASON_LIMIT:
+                binding.txtEmoji.setText("🔒");
+                binding.txtTitle.setText("That's your daily dose!");
+                binding.txtSubtitle.setText(
+                        "You've used up your time for today.\n"
+                        + "Fresh start tomorrow — you've got this! 💪"
+                );
+                break;
+
+            // ─── 5. ALL SESSIONS EXHAUSTED (sessions mode) ───
+            // Every one of the N session slots has been used up
+            case REASON_ALL_SESSIONS:
+                String sessionLabel = sessionCount > 0
+                        ? "All " + sessionCount + " sessions done for today!"
+                        : "All sessions done for today!";
+                binding.txtEmoji.setText("🏁");
+                binding.txtTitle.setText(sessionLabel);
+                binding.txtSubtitle.setText(
+                        "You've completed all your sessions.\n"
+                        + "Reset at midnight — well done today!"
+                );
+                break;
+
+            // ─── Fallback (should never happen) ──────────────
             default:
                 binding.txtEmoji.setText("🔒");
-                binding.txtTitle.setText("Daily limit reached");
-                binding.txtSubtitle.setText("Come back tomorrow");
+                binding.txtTitle.setText("App blocked");
+                binding.txtSubtitle.setText("FocusLock is keeping you on track.");
                 break;
         }
     }
@@ -111,10 +154,11 @@ public class BlockActivity extends Activity {
     // ── Recheck loop ──────────────────────────────────────────
 
     /**
-     * Every 60 seconds, re-evaluate whether the block should still be showing.
-     * For cooldown: check if cooldownEndsMs has passed.
-     * For sleep: check if we are no longer in the sleep window.
-     * For limit: always stay blocked until midnight reset.
+     * Re-evaluates every 60 seconds whether the block should still show.
+     * Dismissed automatically when:
+     *   • SESSION_TIMEOUT / EARLY_EXIT: cooldown has expired
+     *   • SLEEP: re-check is handled by the service sending a new intent
+     *   • LIMIT / ALL_SESSIONS: never auto-dismissed (wait until midnight)
      */
     private void startRecheckLoop(String reason, long cooldownEndsMs) {
         recheck = new Runnable() {
@@ -122,11 +166,12 @@ public class BlockActivity extends Activity {
             public void run() {
                 boolean shouldDismiss = false;
 
-                if (REASON_COOLDOWN.equals(reason)) {
+                if (REASON_SESSION_TIMEOUT.equals(reason) || REASON_EARLY_EXIT.equals(reason)) {
+                    // Dismiss when cooldown has expired
                     shouldDismiss = System.currentTimeMillis() >= cooldownEndsMs;
                 }
-                // Sleep and limit blocks are dismissed when the service stops sending
-                // the intent — we just auto-finish if no new intent arrives
+                // LIMIT and ALL_SESSIONS stay blocked until midnight reset
+                // SLEEP is handled by the service stopping the intent
 
                 if (shouldDismiss) {
                     finish();
@@ -141,12 +186,12 @@ public class BlockActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        // Service sent a new block intent (refreshed reason/time)
-        // Update the UI with new data
+        // Service sent a refreshed block intent — update the UI
         String reason         = intent.getStringExtra(EXTRA_REASON);
         String sleepEnd       = intent.getStringExtra(EXTRA_SLEEP_END);
         long   cooldownEndsMs = intent.getLongExtra(EXTRA_COOLDOWN_END_MS, 0);
-        setupUI(reason, sleepEnd, cooldownEndsMs);
+        int    sessionCount   = intent.getIntExtra(EXTRA_SESSION_COUNT, 0);
+        setupUI(reason, sleepEnd, cooldownEndsMs, sessionCount);
     }
 
     @Override
@@ -155,11 +200,8 @@ public class BlockActivity extends Activity {
         handler.removeCallbacks(recheck);
     }
 
-    // ── Back button disabled ──────────────────────────────────
-
     @Override
     public void onBackPressed() {
-        // Block the back button — user cannot go back into the app
         goHome();
     }
 
@@ -168,7 +210,6 @@ public class BlockActivity extends Activity {
         home.addCategory(Intent.CATEGORY_HOME);
         home.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(home);
-        // Finish this activity so it doesn't linger in the task/recents
         finish();
     }
 }

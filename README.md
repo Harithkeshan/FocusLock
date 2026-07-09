@@ -1,10 +1,14 @@
+# FocusLock
+
 FocusLock is a personal productivity app that blocks distracting apps after your set daily limit is reached.
 
 Features:
-- Set daily time limits for any installed app
-- Split your limit into equal sessions (e.g. 4 x 15 min)
-- Cooldown period between sessions (40 min – 5 hours)
-- Sleep mode to block apps during specific hours
-- Closing an app early still counts the full slot as used
-- Automatic midnight reset for daily counters
-- Persists across phone reboots
+- **Accurate Screen Time Tracking:** Uses real-time `UsageEvents` to accurately calculate foreground usage, completely bypassing MIUI/OEM battery optimization quirks.
+- **Modern UI:** Premium design with rounded corners, pill-shaped buttons, and intuitive session selection.
+- **Flexible Limits:** Set daily time limits for any installed app.
+- **Session Splitting:** Split your limit into equal sessions (e.g. 4 x 15 min).
+- **Cooldown Enforcement:** Cooldown period between sessions (40 min – 5 hours).
+- **Early Exit Tracking:** Closing an app early still counts the full slot as used.
+- **Sleep Mode:** Block apps entirely during specific hours (e.g. 11 PM to 7 AM).
+- **Smart Block Screens:** 5 unique, situation-specific block screens (Sleep, Session Timeout, Early Exit, Daily Limit, All Sessions Done).
+- **Background Reliable:** Persists across phone reboots and resets counters automatically at midnight.

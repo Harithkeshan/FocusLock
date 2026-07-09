@@ -50,6 +50,18 @@ public class DailyUsage {
     // Used to calculate elapsed time inside a session
     public long sessionStartTimeMs;
 
+    // ── Screen-time accumulation ──────────────────────────────
+
+    // Total foreground screen time used today in milliseconds
+    // Accumulated across all completed sessions. Compared against
+    // dailyLimitMinutes * 60_000 to enforce the daily cap.
+    public long totalUsedMs;
+
+    // Screen time accumulated in the CURRENT open session in milliseconds.
+    // Reset to 0 when a new session starts.
+    // Compared against slotDurationMs to enforce per-session timeout (Behaviour 1).
+    public long currentSessionUsedMs;
+
     // ── Cooldown tracking ─────────────────────────────────────
 
     // Whether the app is currently blocked due to cooldown
@@ -59,6 +71,12 @@ public class DailyUsage {
     // The block lifts when System.currentTimeMillis() > cooldownEndsAtMs
     public long cooldownEndsAtMs;
 
+    // What caused this cooldown?
+    // true  = user left the app mid-session (Behaviour 2 — early exit)
+    // false = session slot ran out from continuous use (Behaviour 1 — timeout)
+    // Used by BlockActivity to show the correct message.
+    public boolean isEarlyExitCooldown;
+
     // ── Sleep tracking ────────────────────────────────────────
 
     // Whether the app is currently blocked due to sleep mode
@@ -67,13 +85,16 @@ public class DailyUsage {
 
     // ── Constructor ───────────────────────────────────────────
     public DailyUsage(String packageName, String date) {
-        this.packageName        = packageName;
-        this.date               = date;
-        this.sessionsUsedToday  = 0;
-        this.inActiveSession    = false;
-        this.sessionStartTimeMs = 0;
-        this.inCooldown         = false;
-        this.cooldownEndsAtMs   = 0;
-        this.inSleepBlock       = false;
+        this.packageName          = packageName;
+        this.date                 = date;
+        this.sessionsUsedToday    = 0;
+        this.inActiveSession      = false;
+        this.sessionStartTimeMs   = 0;
+        this.totalUsedMs          = 0;
+        this.currentSessionUsedMs = 0;
+        this.inCooldown           = false;
+        this.cooldownEndsAtMs     = 0;
+        this.isEarlyExitCooldown  = false;
+        this.inSleepBlock         = false;
     }
 }

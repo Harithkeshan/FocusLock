@@ -2,9 +2,12 @@ package com.harithdev.focuslock.database;
 
 import android.content.Context;
 
+import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.migration.Migration;
+import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import com.harithdev.focuslock.model.AppRestriction;
 import com.harithdev.focuslock.model.DailyUsage;
@@ -15,31 +18,53 @@ import com.harithdev.focuslock.model.DailyUsage;
  * Single entry point for all database access.
  * Singleton pattern — only one instance exists in the whole app.
  *
+ * Schema version history:
+ *   v1 → initial schema
+ *   v2 → added totalUsedMs, currentSessionUsedMs columns
+ *   v3 → added isEarlyExitCooldown column (to show correct block message)
+ *
  * File location:
  *   app/src/main/java/com/harith/focuslock/database/FocusLockDatabase.java
  */
 @Database(
         entities  = {AppRestriction.class, DailyUsage.class},
-        version   = 1,
+        version   = 3,          // ← bumped from 2 to 3
         exportSchema = false
 )
 public abstract class FocusLockDatabase extends RoomDatabase {
 
-    // Abstract methods — Room generates the implementations automatically
     public abstract AppRestrictionDao appRestrictionDao();
     public abstract DailyUsageDao     dailyUsageDao();
+
+    // ── Migration v1 → v2 ─────────────────────────────────────
+    static final Migration MIGRATION_1_2 = new Migration(1, 2) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL(
+                "ALTER TABLE daily_usage ADD COLUMN totalUsedMs INTEGER NOT NULL DEFAULT 0"
+            );
+            db.execSQL(
+                "ALTER TABLE daily_usage ADD COLUMN currentSessionUsedMs INTEGER NOT NULL DEFAULT 0"
+            );
+        }
+    };
+
+    // ── Migration v2 → v3 ─────────────────────────────────────
+    // Adds the cooldown-cause flag so BlockActivity shows the right message:
+    //   0 = session timed out (Behaviour 1)
+    //   1 = user exited early (Behaviour 2)
+    static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL(
+                "ALTER TABLE daily_usage ADD COLUMN isEarlyExitCooldown INTEGER NOT NULL DEFAULT 0"
+            );
+        }
+    };
 
     // ── Singleton ─────────────────────────────────────────────
     private static volatile FocusLockDatabase INSTANCE;
 
-    /**
-     * Get the single database instance.
-     * Creates it on first call, returns the same instance on every call after.
-     *
-     * Usage from anywhere in the app:
-     *   FocusLockDatabase db = FocusLockDatabase.getInstance(context);
-     *   AppRestrictionDao dao = db.appRestrictionDao();
-     */
     public static FocusLockDatabase getInstance(Context context) {
         if (INSTANCE == null) {
             synchronized (FocusLockDatabase.class) {
@@ -47,11 +72,9 @@ public abstract class FocusLockDatabase extends RoomDatabase {
                     INSTANCE = Room.databaseBuilder(
                                     context.getApplicationContext(),
                                     FocusLockDatabase.class,
-                                    "focuslock_db"          // name of the .db file on device
+                                    "focuslock_db"
                             )
-                            // If you change the schema in a future version,
-                            // add a proper Migration instead of this line.
-                            .fallbackToDestructiveMigration()
+                            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                             .build();
                 }
             }

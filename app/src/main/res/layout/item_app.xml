@@ -61,7 +61,7 @@
         android:textSize="10sp"
         android:textStyle="bold"
         android:textColor="#c084fc"
-        android:background="#c084fc22"
+        android:background="@drawable/bg_badge_pill"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         android:paddingTop="4dp"

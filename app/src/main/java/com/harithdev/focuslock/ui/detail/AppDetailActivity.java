@@ -15,12 +15,8 @@ import com.harithdev.focuslock.util.TimeUtils;
 
 import java.util.Locale;
 
-import android.app.usage.UsageEvents;
-import android.app.usage.UsageStatsManager;
-import android.content.Context;
-import java.util.Calendar;
-import java.util.List;
 import com.harithdev.focuslock.model.DailyUsage;
+import com.harithdev.focuslock.util.UsageCalculator;
 
 /**
  * AppDetailActivity — Step 3
@@ -308,11 +304,14 @@ public class AppDetailActivity extends AppCompatActivity {
         binding.btnSlot5.setTextColor(selected == 5 ? activeColor : inactiveColor);
         binding.btnSlot6.setTextColor(selected == 6 ? activeColor : inactiveColor);
 
-        binding.btnSlot2.setSelected(selected == 2);
-        binding.btnSlot3.setSelected(selected == 3);
-        binding.btnSlot4.setSelected(selected == 4);
-        binding.btnSlot5.setSelected(selected == 5);
-        binding.btnSlot6.setSelected(selected == 6);
+        int activeBg = com.harithdev.focuslock.R.drawable.bg_slot_active;
+        int inactiveBg = com.harithdev.focuslock.R.drawable.bg_slot_inactive;
+
+        binding.btnSlot2.setBackgroundResource(selected == 2 ? activeBg : inactiveBg);
+        binding.btnSlot3.setBackgroundResource(selected == 3 ? activeBg : inactiveBg);
+        binding.btnSlot4.setBackgroundResource(selected == 4 ? activeBg : inactiveBg);
+        binding.btnSlot5.setBackgroundResource(selected == 5 ? activeBg : inactiveBg);
+        binding.btnSlot6.setBackgroundResource(selected == 6 ? activeBg : inactiveBg);
     }
 
     // ── Split session visibility ──────────────────────────────
@@ -391,7 +390,7 @@ public class AppDetailActivity extends AppCompatActivity {
 
         // Save to DB on background thread
         AsyncTask.execute(() -> {
-            // Store today's already-used time so enforcement is accurate
+            // Pre-populate totalUsedMs from system so enforcement starts accurately
             if (restriction.isRestricted) {
                 String today = TimeUtils.todayString();
                 DailyUsage usage = db.dailyUsageDao().getUsage(packageName, today);
@@ -399,27 +398,35 @@ public class AppDetailActivity extends AppCompatActivity {
                     usage = new DailyUsage(packageName, today);
                     db.dailyUsageDao().insert(usage);
                 }
-                // Convert system usage to sessions already consumed
-                long usedMs      = getSystemUsageToday(packageName);
-                long slotMs      = restriction.getSlotDurationMinutes() * 60_000L;
-                long dailyLimitMs = restriction.dailyLimitMinutes * 60_000L;
 
-                int slotsUsed    = (int)(usedMs / slotMs);
-                int maxSessions  = restriction.splitSessions ? restriction.sessionCount : 1;
+                // Seed totalUsedMs from the real system screen time.
+                // This ensures enforcement is accurate from the moment the user saves.
+                long systemUsedMs = UsageCalculator.getScreenTimeToday(this, packageName);
+                usage.totalUsedMs = systemUsedMs;
 
-                // BUG 1 Fix: Cap used sessions to (max - 1) if overall daily limit isn't fully reached.
-                // This prevents "Daily limit reached" message when just a slot ended on some devices (MIUI).
-                if (usedMs < dailyLimitMs) {
-                    usage.sessionsUsedToday = Math.min(slotsUsed, maxSessions - 1);
+                // In split-session mode, also pre-fill sessionsUsedToday
+                // so the session counter starts at the right number.
+                if (restriction.splitSessions && restriction.getSlotDurationMinutes() > 0) {
+                    long slotMs    = restriction.getSlotDurationMinutes() * 60_000L;
+                    long dailyMs   = restriction.dailyLimitMinutes * 60_000L;
+                    int slotsUsed  = (int) (systemUsedMs / slotMs);
+                    int maxSessions = restriction.sessionCount;
+                    // Cap at (max - 1) if daily limit not fully reached
+                    if (systemUsedMs < dailyMs) {
+                        usage.sessionsUsedToday = Math.min(slotsUsed, maxSessions - 1);
+                    } else {
+                        usage.sessionsUsedToday = maxSessions;
+                    }
                 } else {
-                    usage.sessionsUsedToday = maxSessions;
+                    usage.sessionsUsedToday = 0;
                 }
+
                 db.dailyUsageDao().update(usage);
             }
             db.appRestrictionDao().insert(restriction); // REPLACE if exists
             runOnUiThread(() -> {
-                Toast.makeText(this, "Settings saved ✓", Toast.LENGTH_SHORT).show();
-                finish(); // go back to app list
+                android.widget.Toast.makeText(this, "Settings saved ✓", android.widget.Toast.LENGTH_SHORT).show();
+                finish();
             });
         });
     }
@@ -468,7 +475,8 @@ public class AppDetailActivity extends AppCompatActivity {
 
     private void loadTodayUsage() {
         AsyncTask.execute(() -> {
-            long usedMs = getSystemUsageToday(packageName);
+            // Use the shared UsageCalculator — same algorithm as enforcement
+            long usedMs = UsageCalculator.getScreenTimeToday(this, packageName);
             runOnUiThread(() -> {
                 if (usedMs <= 0) {
                     binding.txtUsageToday.setText("📊 Used today: none");
@@ -487,59 +495,6 @@ public class AppDetailActivity extends AppCompatActivity {
                 binding.txtUsageToday.setText("📊 Used today: ~" + display);
             });
         });
-    }
-
-    private long getSystemUsageToday(String packageName) {
-        try {
-            UsageStatsManager usm = (UsageStatsManager)
-                    getSystemService(Context.USAGE_STATS_SERVICE);
-            if (usm == null) return 0;
-
-            Calendar midnight = Calendar.getInstance();
-            midnight.set(Calendar.HOUR_OF_DAY, 0);
-            midnight.set(Calendar.MINUTE, 0);
-            midnight.set(Calendar.SECOND, 0);
-            midnight.set(Calendar.MILLISECOND, 0);
-
-            long startTime = midnight.getTimeInMillis();
-            long endTime   = System.currentTimeMillis();
-
-            // queryEvents is the most accurate way to match Digital Wellbeing.
-            // We manually sum the durations between ACTIVITY_RESUMED (10) and ACTIVITY_PAUSED (11).
-            UsageEvents events = usm.queryEvents(startTime, endTime);
-            UsageEvents.Event event = new UsageEvents.Event();
-
-            long totalTimeMs = 0;
-            long lastResumedTime = 0;
-
-            while (events.hasNextEvent()) {
-                events.getNextEvent(event);
-                if (event.getPackageName().equals(packageName)) {
-                    int type = event.getEventType();
-
-                    // 10 = ACTIVITY_RESUMED, 11 = ACTIVITY_PAUSED
-                    // This avoids including "Foreground Services" (Type 19/20) which often 
-                    // inflate usage time on apps like Facebook or Instagram.
-                    if (type == 10) {
-                        lastResumedTime = event.getTimeStamp();
-                    } else if (type == 11) {
-                        if (lastResumedTime > 0) {
-                            totalTimeMs += (event.getTimeStamp() - lastResumedTime);
-                            lastResumedTime = 0;
-                        }
-                    }
-                }
-            }
-
-            // If the app is currently open, add the time since it was last resumed
-            if (lastResumedTime > 0) {
-                totalTimeMs += (endTime - lastResumedTime);
-            }
-
-            return totalTimeMs;
-        } catch (Exception e) {
-            return 0;
-        }
     }
 
     @Override

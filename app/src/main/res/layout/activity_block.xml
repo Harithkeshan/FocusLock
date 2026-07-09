@@ -13,57 +13,68 @@
     android:padding="40dp"
     android:background="#0a0a0f">
 
-    <!-- Big emoji -->
-    <TextView
-        android:id="@+id/txt_emoji"
-        android:layout_width="wrap_content"
+    <!-- Card Container for Content -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="🔒"
-        android:textSize="72sp"
-        android:layout_marginBottom="32dp" />
-
-    <!-- Main title e.g. "Daily limit reached" -->
-    <TextView
-        android:id="@+id/txt_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Daily limit reached"
-        android:textSize="26sp"
-        android:textStyle="bold"
-        android:textColor="#f0eeff"
+        android:orientation="vertical"
         android:gravity="center"
-        android:layout_marginBottom="14dp" />
+        android:background="@drawable/bg_card"
+        android:padding="32dp">
 
-    <!-- Subtitle e.g. "Come back tomorrow" or "Come back at 2:45 PM" -->
-    <TextView
-        android:id="@+id/txt_subtitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Come back tomorrow"
-        android:textSize="16sp"
-        android:textColor="#9990bb"
-        android:gravity="center"
-        android:lineSpacingMultiplier="1.4"
-        android:layout_marginBottom="56dp" />
+        <!-- Big emoji -->
+        <TextView
+            android:id="@+id/txt_emoji"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔒"
+            android:textSize="72sp"
+            android:layout_marginBottom="32dp" />
 
-    <!-- Divider -->
-    <View
-        android:layout_width="48dp"
-        android:layout_height="1dp"
-        android:background="#2a2a38"
-        android:layout_marginBottom="56dp" />
+        <!-- Main title e.g. "Daily limit reached" -->
+        <TextView
+            android:id="@+id/txt_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Daily limit reached"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#f0eeff"
+            android:gravity="center"
+            android:layout_marginBottom="14dp" />
 
-    <!-- Go to home screen button -->
-    <TextView
-        android:id="@+id/btn_go_home"
-        android:layout_width="200dp"
-        android:layout_height="52dp"
-        android:text="Go to Home Screen"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:textColor="#c084fc"
-        android:gravity="center"
-        android:background="#c084fc22" />
+        <!-- Subtitle e.g. "Come back tomorrow" or "Come back at 2:45 PM" -->
+        <TextView
+            android:id="@+id/txt_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Come back tomorrow"
+            android:textSize="16sp"
+            android:textColor="#9990bb"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.4"
+            android:layout_marginBottom="40dp" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="48dp"
+            android:layout_height="1dp"
+            android:background="#2a2a38"
+            android:layout_marginBottom="40dp" />
+
+        <!-- Go to home screen button -->
+        <TextView
+            android:id="@+id/btn_go_home"
+            android:layout_width="200dp"
+            android:layout_height="52dp"
+            android:text="Go to Home Screen"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#c084fc"
+            android:gravity="center"
+            android:background="@drawable/bg_button_secondary" />
+
+    </LinearLayout>
 
     <!-- Small note at bottom -->
     <TextView
@@ -73,6 +84,6 @@
         android:textSize="11sp"
         android:textColor="#2a2a38"
         android:gravity="center"
-        android:layout_marginTop="40dp" />
+        android:layout_marginTop="32dp" />
 
 </LinearLayout>
