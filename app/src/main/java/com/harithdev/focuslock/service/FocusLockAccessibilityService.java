@@ -3,6 +3,8 @@ package com.harithdev.focuslock.service;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 
@@ -18,13 +20,28 @@ import com.harithdev.focuslock.util.TimeUtils;
  * Triggered on every TYPE_WINDOW_STATE_CHANGED event.
  * This is the primary enforcement engine.
  *
- * ── Block reasons used ─────────────────────────────────────────────
+ * ── Bug fix: debounced session close ──────────────────────────────────
  *
+ * Problem (v1): On MIUI/Xiaomi, navigating WITHIN an app (e.g. opening
+ * Facebook Stories, tapping Comments) fires a brief system transition
+ * event (com.android.systemui, com.miui.home, etc.) BEFORE the in-app
+ * Activity arrives. The old code closed the session immediately on that
+ * brief system event → false "early exit" block was shown.
+ *
+ * Fix (v2): Session closes are now DEBOUNCED by 2 seconds when the new
+ * window belongs to a safe/system app. If the restricted app (or any other
+ * non-system app) comes to the foreground within 2 seconds, the pending
+ * close is cancelled and the session continues uninterrupted.
+ *
+ * Internet speed is NOT a factor — TYPE_WINDOW_STATE_CHANGED fires when
+ * an Android Activity WINDOW opens (immediate), not when its content loads.
+ *
+ * ── Block reasons ──────────────────────────────────────────────────────
  *   REASON_SLEEP           → user opened app during sleep window
- *   REASON_EARLY_EXIT      → user re-opened during cooldown caused by mid-session exit (B2)
- *   REASON_SESSION_TIMEOUT → user re-opened during cooldown caused by slot expiry (B1)
- *   REASON_LIMIT           → total daily screen time exceeded (no-split mode)
- *   REASON_ALL_SESSIONS    → all N session slots consumed for the day (split mode)
+ *   REASON_EARLY_EXIT      → user re-opened during B2 cooldown
+ *   REASON_SESSION_TIMEOUT → user re-opened during B1 cooldown
+ *   REASON_LIMIT           → daily screen time exceeded (no-split mode)
+ *   REASON_ALL_SESSIONS    → all N session slots consumed (split mode)
  *
  * File location:
  *   app/src/main/java/com/harithdev/focuslock/service/FocusLockAccessibilityService.java
@@ -33,17 +50,32 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
     private static final String TAG = "FocusLock";
 
-    // ── Shared state (read by UsageTrackingService) ────────────
+    /** Grace period before a session is considered "exited". 2 seconds handles:
+     *  - MIUI transition overlays (< 400ms)
+     *  - Facebook Stories / Comments in-app navigation (< 600ms)
+     *  - Any other brief system-level window events during animations
+     *  Internet speed has NO effect on this — window events fire when the
+     *  Activity OPENS, not when its content finishes loading. */
+    private static final long SESSION_CLOSE_DEBOUNCE_MS = 2_000;
+
+    // ── Shared state (read by UsageTrackingService) ────────────────────
     public static volatile String currentForegroundApp = null;
     public static volatile long   lastEventTime        = 0;
 
-    // ── Internal session state ─────────────────────────────────
-    private String activeRestrictedPkg = null;
-    private long   sessionStartMs      = 0;
+    // ── Internal session state ─────────────────────────────────────────
+    private volatile String activeRestrictedPkg = null;
+    private volatile long   sessionStartMs      = 0;
 
-    // ══════════════════════════════════════════════════════════════
+    // ── Debounced session-close ────────────────────────────────────────
+    // Runs on the main thread; holds a pending close that is cancelled if the
+    // restricted app (or any real app) returns within SESSION_CLOSE_DEBOUNCE_MS.
+    private final Handler  sessionCloseHandler = new Handler(Looper.getMainLooper());
+    private       Runnable pendingSessionClose = null;
+    private       String   pendingClosePkg     = null;
+
+    // ══════════════════════════════════════════════════════════════════════
     //  Accessibility event entry point
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
@@ -58,25 +90,51 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         new Thread(() -> handleWindowChange(newPkg)).start();
     }
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  Core logic
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     private void handleWindowChange(String newPkg) {
         long now = System.currentTimeMillis();
 
-        // ── Step 1: Close any active restricted session if user moved away ──
+        // ── Step 1: Handle session close when the user moves away ─────────
+        //
+        // We differentiate two cases:
+        //
+        //   A) newPkg is a SAFE / SYSTEM app (launcher, systemui, etc.)
+        //      → Could be a transient MIUI overlay during within-app navigation.
+        //      → DEBOUNCE: schedule close in 2s. If the restricted app (or any
+        //        real app) returns within 2s, the close is cancelled.
+        //
+        //   B) newPkg is a REAL (non-safe) app other than the current session pkg
+        //      → User definitely moved to another non-system app.
+        //      → CLOSE IMMEDIATELY (cancel any pending debounce first).
+        //
         if (activeRestrictedPkg != null && !activeRestrictedPkg.equals(newPkg)) {
-            closeActiveSession(activeRestrictedPkg, now);
+            if (isSafeApp(newPkg)) {
+                // Case A — might be a transient overlay, debounce the close
+                schedulePendingClose(activeRestrictedPkg);
+                // We still return here (safe app, nothing to enforce)
+                return;
+            } else {
+                // Case B — user went to a different real app, close immediately
+                cancelPendingClose();
+                closeActiveSession(activeRestrictedPkg, now);
+            }
         }
 
-        // ── Step 2: Safe apps — nothing to enforce ──
+        // ── Step 2: If the restricted app came back, cancel any pending close ──
+        // Handles: Stories back-press, Comments loading, any within-app return
+        if (activeRestrictedPkg != null && activeRestrictedPkg.equals(newPkg)) {
+            cancelPendingClose();
+        }
+
+        // ── Step 3: Safe apps — nothing to enforce ─────────────────────────
         if (isSafeApp(newPkg)) {
-            Log.d(TAG, "✅ Safe app: " + newPkg);
             return;
         }
 
-        // ── Step 3: Look up restriction ──
+        // ── Step 4: Look up restriction ────────────────────────────────────
         FocusLockDatabase db = FocusLockDatabase.getInstance(this);
         AppRestriction restriction = db.appRestrictionDao().getByPackageName(newPkg);
 
@@ -85,11 +143,11 @@ public class FocusLockAccessibilityService extends AccessibilityService {
             return;
         }
 
-        // ── Step 4: Enforce block conditions ──
+        // ── Step 5: Enforce block conditions ───────────────────────────────
         String today = TimeUtils.todayString();
         DailyUsage usage = getOrCreateUsage(db, newPkg, today);
 
-        // 4a. Sleep mode
+        // 5a. Sleep mode
         if (restriction.sleepModeEnabled &&
                 TimeUtils.isInSleepWindow(restriction.sleepStartTime, restriction.sleepEndTime)) {
             Log.d(TAG, "🌙 BLOCK — sleep");
@@ -97,14 +155,12 @@ public class FocusLockAccessibilityService extends AccessibilityService {
             return;
         }
 
-        // 4b. Cooldown active?
+        // 5b. Cooldown still active?
         if (usage.inCooldown) {
             if (now < usage.cooldownEndsAtMs) {
                 if (isDailyLimitReached(restriction, usage)) {
-                    // All sessions + time also exhausted — show permanent limit block
-                    showLimitBlock(newPkg, restriction, usage);
+                    showLimitBlock(newPkg, restriction);
                 } else {
-                    // Cooldown still running — show correct message based on what caused it
                     String cooldownReason = usage.isEarlyExitCooldown
                             ? BlockActivity.REASON_EARLY_EXIT
                             : BlockActivity.REASON_SESSION_TIMEOUT;
@@ -122,13 +178,13 @@ public class FocusLockAccessibilityService extends AccessibilityService {
             }
         }
 
-        // 4c. Daily / session limit reached?
+        // 5c. Daily / session limit already reached?
         if (isDailyLimitReached(restriction, usage)) {
-            showLimitBlock(newPkg, restriction, usage);
+            showLimitBlock(newPkg, restriction);
             return;
         }
 
-        // ── Step 5: Allow — start session ──
+        // ── Step 6: Allow — start/resume session ───────────────────────────
         if (!newPkg.equals(activeRestrictedPkg)) {
             Log.d(TAG, "▶️ Session started for " + newPkg);
 
@@ -147,9 +203,53 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         Log.d(TAG, "✅ " + newPkg + " allowed — session active");
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  Session close (Behaviour 2 — early exit)
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //  Debounced session close helpers
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Schedules closeActiveSession() for [pkg] to fire after
+     * SESSION_CLOSE_DEBOUNCE_MS milliseconds.
+     *
+     * If the restricted app returns before the timer fires, call
+     * cancelPendingClose() to abort it — the session continues as if
+     * the user never left.
+     *
+     * Must be called from any thread; Handler is main-thread-safe.
+     */
+    private synchronized void schedulePendingClose(final String pkg) {
+        cancelPendingClose();            // cancel any previous pending close
+        pendingClosePkg = pkg;
+        pendingSessionClose = () -> {
+            // Double-check the package hasn't changed since we scheduled
+            if (pkg.equals(pendingClosePkg)) {
+                Log.d(TAG, "⏰ Debounce fired — closing session for " + pkg);
+                new Thread(() -> closeActiveSession(pkg, System.currentTimeMillis())).start();
+            }
+            pendingSessionClose = null;
+            pendingClosePkg     = null;
+        };
+        sessionCloseHandler.postDelayed(pendingSessionClose, SESSION_CLOSE_DEBOUNCE_MS);
+        Log.d(TAG, "⏱️ Session close debounce started for " + pkg + " (" + SESSION_CLOSE_DEBOUNCE_MS + "ms)");
+    }
+
+    /**
+     * Cancels a pending debounced session close (if any).
+     * Call this when the restricted app returns to the foreground,
+     * or when a real (non-safe) app takes over and we close immediately.
+     */
+    private synchronized void cancelPendingClose() {
+        if (pendingSessionClose != null) {
+            sessionCloseHandler.removeCallbacks(pendingSessionClose);
+            pendingSessionClose = null;
+            pendingClosePkg     = null;
+            Log.d(TAG, "❌ Pending session close cancelled (app returned)");
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Session close — Behaviour 2 (early exit cooldown)
+    // ══════════════════════════════════════════════════════════════════════
 
     private void closeActiveSession(String pkg, long now) {
         Log.d(TAG, "💾 Closing session for " + pkg);
@@ -179,7 +279,7 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         if (restriction != null && restriction.splitSessions) {
             usage.inCooldown          = true;
             usage.cooldownEndsAtMs    = now + (restriction.cooldownMinutes * 60_000L);
-            usage.isEarlyExitCooldown = true;   // ← marks this as a B2 cooldown
+            usage.isEarlyExitCooldown = true;    // marks this as a B2 cooldown
             Log.d(TAG, "🧘 Early exit — cooldown until " + usage.cooldownEndsAtMs);
         }
 
@@ -188,20 +288,14 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         sessionStartMs      = 0;
     }
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  Helpers
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Shows the correct "limit reached" block — either:
-     *   • REASON_ALL_SESSIONS (split mode, all N slots done)
-     *   • REASON_LIMIT        (daily-cap mode, time exhausted)
-     */
-    private void showLimitBlock(String pkg, AppRestriction restriction, DailyUsage usage) {
+    private void showLimitBlock(String pkg, AppRestriction restriction) {
         if (restriction.splitSessions) {
             Log.d(TAG, "🏁 BLOCK — all sessions done (" + restriction.sessionCount + ")");
-            showBlock(pkg, BlockActivity.REASON_ALL_SESSIONS,
-                    null, 0, restriction.sessionCount);
+            showBlock(pkg, BlockActivity.REASON_ALL_SESSIONS, null, 0, restriction.sessionCount);
         } else {
             Log.d(TAG, "🔒 BLOCK — daily limit reached");
             showBlock(pkg, BlockActivity.REASON_LIMIT, null, 0, 0);
@@ -228,22 +322,39 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         return usage;
     }
 
+    /**
+     * Returns true for packages that should NEVER trigger a session close or
+     * block enforcement. These are launchers, system UI, and FocusLock itself.
+     *
+     * IMPORTANT: Keep this list in sync. If a system package triggers false
+     * session closes, add it here rather than reducing the debounce timeout.
+     */
     private boolean isSafeApp(String pkg) {
         if (pkg == null) return true;
+        // FocusLock itself
         if (pkg.startsWith("com.harithdev.focuslock")) return true;
-        if (pkg.equals("android") || pkg.equals("com.android.systemui")) return true;
+        // Android system
+        if (pkg.equals("android")) return true;
+        if (pkg.equals("com.android.systemui")) return true;
+        // Launchers / home
         String lower = pkg.toLowerCase();
-        if (lower.contains("launcher") || lower.contains("home") || lower.contains("shell")) return true;
-        if (pkg.equals("com.miui.home") || pkg.equals("com.miui.systemui.plugin") ||
-                pkg.equals("miui.systemui.plugin") || pkg.equals("com.sec.android.app.launcher") ||
-                pkg.equals("com.android.launcher3")) return true;
+        if (lower.contains("launcher")) return true;
+        if (lower.contains("home"))     return true;
+        if (lower.contains("shell"))    return true;
+        // MIUI-specific
+        if (pkg.equals("com.miui.home"))                 return true;
+        if (pkg.equals("com.miui.systemui.plugin"))      return true;
+        if (pkg.equals("miui.systemui.plugin"))          return true;
+        if (pkg.equals("com.miui.securitycenter"))       return true;  // ← added
+        if (pkg.equals("com.miui.system"))               return true;  // ← added
+        if (pkg.equals("com.miui.packageinstaller"))     return true;  // ← added
+        // Common Android launchers
+        if (pkg.equals("com.sec.android.app.launcher")) return true;
+        if (pkg.equals("com.android.launcher3"))         return true;
+        if (pkg.equals("com.google.android.apps.nexuslauncher")) return true;
         return false;
     }
 
-    /**
-     * @param sessionCount  pass restriction.sessionCount for REASON_ALL_SESSIONS,
-     *                      or 0 for all other reasons
-     */
     private void showBlock(String pkg, String reason,
                            String sleepEnd, long cooldownEndsMs, int sessionCount) {
         Intent intent = new Intent(this, BlockActivity.class);
@@ -256,11 +367,22 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         startActivity(intent);
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  Service lifecycle
+    // ══════════════════════════════════════════════════════════════════════
+
     @Override
     public void onInterrupt() {
+        cancelPendingClose();
         if (activeRestrictedPkg != null) {
             closeActiveSession(activeRestrictedPkg, System.currentTimeMillis());
         }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        cancelPendingClose();
     }
 
     @Override
