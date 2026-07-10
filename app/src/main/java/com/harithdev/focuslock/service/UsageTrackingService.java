@@ -3,8 +3,10 @@ package com.harithdev.focuslock.service;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -38,43 +40,54 @@ import com.harithdev.focuslock.util.TimeUtils;
  *   • Checking every 15s whether the current session's screen time
  *     has exceeded the slot duration (continuous use timeout).
  *   • If yes → it ends the session, starts cooldown, and shows the block.
+ *   • FIX 6: Sends a "5 minutes remaining" warning notification when the
+ *     user is approaching their daily or session limit.
+ *   • FIX 8: Detects and ignores date/time manipulation (clock jumps back).
  *   • Also acts as a safety net: re-checks daily limit in case the
  *     Accessibility Service missed an event.
- *
- * ── Why wall-clock is NOT used for session duration ────────────────
- *
- * We use `currentSessionUsedMs` (accumulated actual screen time from
- * the Accessibility Service) rather than `now - sessionStartTimeMs`.
- * This is because the user may have switched away briefly (causing
- * the Accessibility Service to pause the timer) and come back.
- *
- * However, for simplicity, this poller also adds the LIVE elapsed time
- * since sessionStartTimeMs when calculating whether to block — this is
- * safe because if the app is currently in the foreground (confirmed by
- * AccessibilityService.currentForegroundApp), the time IS accruing.
  *
  * File location:
  *   app/src/main/java/com/harithdev/focuslock/service/UsageTrackingService.java
  */
 public class UsageTrackingService extends Service {
 
-    private static final String TAG           = "FocusLock";
-    private static final String CHANNEL_ID    = "focuslock_service";
-    private static final String CHANNEL_NAME  = "FocusLock Running";
-    private static final int    NOTIF_ID      = 1001;
+    private static final String TAG          = "FocusLock";
+    private static final String CHANNEL_ID   = "focuslock_service";
+    private static final String CHANNEL_NAME = "FocusLock Running";
+
+    // ── FIX 6: Warning notification channel ───────────────────────────
+    private static final String WARN_CHANNEL_ID   = "focuslock_warnings";
+    private static final String WARN_CHANNEL_NAME = "FocusLock Limit Warnings";
+    private static final int    NOTIF_ID          = 1001;
+    /** Warning is sent when this many ms remain in the limit */
+    private static final long   WARN_THRESHOLD_MS = 5 * 60_000L; // 5 minutes
+
     private static final long   CHECK_INTERVAL_MS = 15_000; // 15 seconds
+
+    /** SharedPreferences key prefix for tracking per-app, per-day warning state.
+     *  Format: "warned_com.instagram.android_2025-08-15" = true/false */
+    private static final String PREFS_NAME         = "focuslock_prefs";
+    private static final String KEY_WARN_PREFIX     = "warned_";
+
+    // ── FIX 8: Clock manipulation detection ───────────────────────────
+    /** Minimum forward-jump that we consider suspicious (5 minutes). */
+    private static final long CLOCK_TOLERANCE_MS = 5 * 60_000L;
+    private static final String KEY_LAST_KNOWN_MS = "last_known_timestamp_ms";
 
     private Handler  handler;
     private Runnable checkRunnable;
     private FocusLockDatabase db;
+    private SharedPreferences prefs;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        db      = FocusLockDatabase.getInstance(this);
+        db    = FocusLockDatabase.getInstance(this);
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+
         handler = new Handler(Looper.getMainLooper());
-        createNotificationChannel();
-        startForeground(NOTIF_ID, buildNotification());
+        createNotificationChannels();
+        startForeground(NOTIF_ID, buildServiceNotification());
         Log.d(TAG, "✅ UsageTrackingService started");
         startChecking();
     }
@@ -111,75 +124,82 @@ public class UsageTrackingService extends Service {
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  Core check — Behaviour 1: continuous session timeout
+    //  Core check
     // ══════════════════════════════════════════════════════════════
 
     private void performCheck() {
-        // Use the Accessibility Service's real-time foreground detection.
-        // This is far more reliable on MIUI than querying UsageStatsManager.
+        long now = System.currentTimeMillis();
+
+        // ── FIX 8: Clock manipulation detection ───────────────────────
+        // If the system clock appears to have jumped backwards by more than
+        // CLOCK_TOLERANCE_MS, the user likely manipulated the date/time to
+        // bypass their daily limit. We reject this cycle and don't process
+        // any enforcement, preventing a reset of their usage counter.
+        long lastKnownMs = prefs.getLong(KEY_LAST_KNOWN_MS, 0);
+        if (lastKnownMs > 0 && now < lastKnownMs - CLOCK_TOLERANCE_MS) {
+            Log.w(TAG, "⚠️ Clock went backwards by "
+                    + (lastKnownMs - now) / 1000 + "s — ignoring cycle (likely date manipulation)");
+            // Don't update lastKnownMs — keep the high watermark
+            return;
+        }
+        // Always store the highest timestamp we've seen (monotonic high watermark)
+        if (now > lastKnownMs) {
+            prefs.edit().putLong(KEY_LAST_KNOWN_MS, now).apply();
+        }
+
+        // ── Use Accessibility Service's real-time foreground detection ──
         String foreground = FocusLockAccessibilityService.currentForegroundApp;
         long   lastUpdate = FocusLockAccessibilityService.lastEventTime;
-        long   now        = System.currentTimeMillis();
 
-        // If the accessibility data is stale (> 30s), we can't reliably know
-        // what's in the foreground — skip this check cycle.
         if (foreground == null || (now - lastUpdate) > 30_000) {
-            Log.d(TAG, "⚠️ Accessibility data stale or null — skipping this cycle");
+            Log.d(TAG, "⚠️ Accessibility data stale or null — skipping cycle");
             return;
         }
 
-        // Skip safe apps entirely
-        if (isSafeApp(foreground)) {
-            return;
-        }
+        if (isSafeApp(foreground)) return;
 
-        // Check if this foreground app has an active restriction
         AppRestriction restriction = db.appRestrictionDao().getByPackageName(foreground);
-        if (restriction == null || !restriction.isRestricted) {
-            return;
-        }
-
-        // Only relevant in split-session mode (Behaviour 1 is a session concept)
-        // In daily-limit-only mode, the Accessibility Service handles blocking on open.
-        if (!restriction.splitSessions) {
-            // Safety net: re-check daily limit in case accessibility missed something
-            checkDailyLimitSafetyNet(restriction, foreground, now);
-            return;
-        }
+        if (restriction == null || !restriction.isRestricted) return;
 
         String today = TimeUtils.todayString();
-        DailyUsage usage = db.dailyUsageDao().getUsage(foreground, today);
-        if (usage == null || !usage.inActiveSession) {
-            return; // No active session to time out
+
+        if (!restriction.splitSessions) {
+            // Daily-limit-only mode: safety net block + FIX 6 warning
+            checkDailyLimitSafetyNet(restriction, foreground, now, today);
+            return;
         }
 
-        // ── Behaviour 1: continuous session timeout ──
-        // Calculate total screen time for this session:
-        //   accumulated time (from before any mid-session switches) +
-        //   live time since the session (re-)started.
-        long liveElapsedMs = (usage.sessionStartTimeMs > 0)
-                ? (now - usage.sessionStartTimeMs) : 0;
-        long totalSessionMs = usage.currentSessionUsedMs + liveElapsedMs;
+        // ── Split-session mode: Behaviour 1 continuous session timeout ──
+        DailyUsage usage = db.dailyUsageDao().getUsage(foreground, today);
+        if (usage == null || !usage.inActiveSession) return;
 
+        long liveElapsedMs  = (usage.sessionStartTimeMs > 0) ? (now - usage.sessionStartTimeMs) : 0;
+        long totalSessionMs = usage.currentSessionUsedMs + liveElapsedMs;
         long slotDurationMs = restriction.getSlotDurationMinutes() * 60_000L;
 
-        Log.d(TAG, "⏱️ [" + foreground + "] session time: "
-                + (totalSessionMs / 1000) + "s / limit: " + (slotDurationMs / 1000) + "s");
+        Log.d(TAG, "⏱️ [" + foreground + "] session: "
+                + totalSessionMs / 1000 + "s / " + slotDurationMs / 1000 + "s");
+
+        // FIX 6: Send warning when 5 minutes remain in the current session
+        long remainingMs = slotDurationMs - totalSessionMs;
+        if (remainingMs > 0 && remainingMs <= WARN_THRESHOLD_MS) {
+            String appLabel = getAppLabel(foreground);
+            sendLimitWarning(foreground, today, appLabel,
+                    "session", Math.max(1, (int)(remainingMs / 60_000)));
+        }
 
         if (totalSessionMs >= slotDurationMs) {
-            Log.d(TAG, "⛔ BLOCKING — session time exceeded (Behaviour 1 — timeout)");
+            Log.d(TAG, "⛔ BLOCKING — session timeout (Behaviour 1)");
 
-            // Close the session in DB
-            usage.totalUsedMs          += liveElapsedMs;
-            usage.currentSessionUsedMs  = 0;
-            usage.inActiveSession       = false;
-            usage.sessionStartTimeMs    = 0;
-            usage.inCooldown            = true;
-            usage.cooldownEndsAtMs      = now + (restriction.cooldownMinutes * 60_000L);
-            usage.isEarlyExitCooldown   = false;   // ← B1 timeout, not early exit
+            usage.totalUsedMs         += liveElapsedMs;
+            usage.currentSessionUsedMs = 0;
+            usage.inActiveSession      = false;
+            usage.sessionStartTimeMs   = 0;
+            usage.inCooldown           = true;
+            usage.cooldownEndsAtMs     = now + (restriction.cooldownMinutes * 60_000L);
+            usage.isEarlyExitCooldown  = false;
             db.dailyUsageDao().update(usage);
 
-            // Show the "Time's up for this session!" screen
             showBlockScreen(foreground, BlockActivity.REASON_SESSION_TIMEOUT,
                     null, usage.cooldownEndsAtMs, 0);
         }
@@ -187,20 +207,24 @@ public class UsageTrackingService extends Service {
 
     /**
      * Safety net for daily-limit-only mode.
-     * If `totalUsedMs` already exceeds the limit but the app is still open,
-     * we block it here. This shouldn't normally happen (the Accessibility
-     * Service handles it on open) but covers edge cases where the app was
-     * already open when the limit was set.
+     * Also sends the "5 minutes remaining" warning notification (FIX 6).
      */
     private void checkDailyLimitSafetyNet(AppRestriction restriction,
-                                          String foreground, long now) {
-        String today = TimeUtils.todayString();
+                                          String foreground, long now, String today) {
         DailyUsage usage = db.dailyUsageDao().getUsage(foreground, today);
         if (usage == null || !usage.inActiveSession) return;
 
-        long liveElapsedMs  = (usage.sessionStartTimeMs > 0) ? (now - usage.sessionStartTimeMs) : 0;
-        long totalMs        = usage.totalUsedMs + liveElapsedMs;
-        long dailyLimitMs   = restriction.dailyLimitMinutes * 60_000L;
+        long liveElapsedMs = (usage.sessionStartTimeMs > 0) ? (now - usage.sessionStartTimeMs) : 0;
+        long totalMs       = usage.totalUsedMs + liveElapsedMs;
+        long dailyLimitMs  = restriction.dailyLimitMinutes * 60_000L;
+
+        // FIX 6: Send warning when 5 minutes remain in the daily limit
+        long remainingMs = dailyLimitMs - totalMs;
+        if (remainingMs > 0 && remainingMs <= WARN_THRESHOLD_MS) {
+            String appLabel = getAppLabel(foreground);
+            sendLimitWarning(foreground, today, appLabel,
+                    "daily", Math.max(1, (int)(remainingMs / 60_000)));
+        }
 
         if (totalMs >= dailyLimitMs) {
             Log.d(TAG, "🔒 BLOCKING — daily limit reached (safety net)");
@@ -210,14 +234,73 @@ public class UsageTrackingService extends Service {
             usage.sessionStartTimeMs = 0;
             db.dailyUsageDao().update(usage);
 
-            // Show "That's your daily dose!" screen
             showBlockScreen(foreground, BlockActivity.REASON_LIMIT, null, 0, 0);
         }
     }
 
     // ══════════════════════════════════════════════════════════════
+    //  FIX 6 — "Approaching limit" warning notification
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Sends a warning notification that the user is approaching their limit.
+     *
+     * De-duplication: uses SharedPreferences to ensure the warning is sent
+     * at most ONCE per app per day. The key is cleared on the next day's
+     * usage, so it fires fresh each new day.
+     *
+     * @param pkg        package name of the app being tracked
+     * @param today      today's date string ("yyyy-MM-dd")
+     * @param appLabel   human-readable app name
+     * @param limitType  "session" or "daily"
+     * @param minsLeft   approximate minutes remaining (shown in notification)
+     */
+    private void sendLimitWarning(String pkg, String today,
+                                  String appLabel, String limitType, int minsLeft) {
+        String warnKey = KEY_WARN_PREFIX + pkg + "_" + today + "_" + limitType;
+        if (prefs.getBoolean(warnKey, false)) {
+            return; // Already sent the warning for this app today
+        }
+        prefs.edit().putBoolean(warnKey, true).apply();
+
+        String title   = "⏰ " + appLabel + " — " + minsLeft + " min left";
+        String message = limitType.equals("session")
+                ? "Your current session ends in " + minsLeft + " min. FocusLock will block the app after."
+                : "You've almost used your daily limit for " + appLabel + ". " + minsLeft + " min left today.";
+
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm == null) return;
+
+        // Notification ID is unique per-app so multiple apps show separate notifications
+        int warnNotifId = 2000 + Math.abs(pkg.hashCode() % 1000);
+
+        Notification notification = new NotificationCompat.Builder(this, WARN_CHANNEL_ID)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .build();
+
+        nm.notify(warnNotifId, notification);
+        Log.d(TAG, "🔔 Limit warning sent for " + pkg + " [" + limitType + "] " + minsLeft + "min left");
+    }
+
+    // ══════════════════════════════════════════════════════════════
     //  Helpers
     // ══════════════════════════════════════════════════════════════
+
+    private String getAppLabel(String pkg) {
+        try {
+            return getPackageManager()
+                    .getApplicationLabel(
+                            getPackageManager().getApplicationInfo(pkg, 0))
+                    .toString();
+        } catch (Exception e) {
+            return pkg;
+        }
+    }
 
     private boolean isSafeApp(String pkg) {
         if (pkg == null) return true;
@@ -244,20 +327,30 @@ public class UsageTrackingService extends Service {
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  Notification (required for foreground service)
+    //  Notifications
     // ══════════════════════════════════════════════════════════════
 
-    private void createNotificationChannel() {
+    private void createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription("FocusLock is monitoring your app usage");
             NotificationManager nm = getSystemService(NotificationManager.class);
-            if (nm != null) nm.createNotificationChannel(channel);
+            if (nm == null) return;
+
+            // Foreground service channel (persistent, silent)
+            NotificationChannel serviceChannel = new NotificationChannel(
+                    CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW);
+            serviceChannel.setDescription("FocusLock is monitoring your app usage");
+            nm.createNotificationChannel(serviceChannel);
+
+            // FIX 6: Warning channel (high importance — pops up as heads-up notification)
+            NotificationChannel warnChannel = new NotificationChannel(
+                    WARN_CHANNEL_ID, WARN_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH);
+            warnChannel.setDescription("Alerts when you're close to your app limit");
+            warnChannel.enableVibration(true);
+            nm.createNotificationChannel(warnChannel);
         }
     }
 
-    private Notification buildNotification() {
+    private Notification buildServiceNotification() {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("FocusLock is active")
                 .setContentText("Monitoring your app usage")

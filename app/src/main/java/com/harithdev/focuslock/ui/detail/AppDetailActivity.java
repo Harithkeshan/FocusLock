@@ -1,6 +1,5 @@
 package com.harithdev.focuslock.ui.detail;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.SeekBar;
@@ -73,19 +72,19 @@ public class AppDetailActivity extends AppCompatActivity {
         binding.btnBack.setOnClickListener(v -> finish());
 
         // Load app icon on background thread
-        AsyncTask.execute(() -> {
+        new Thread(() -> {
             try {
                 android.graphics.drawable.Drawable icon =
                         getPackageManager().getApplicationIcon(packageName);
                 runOnUiThread(() -> binding.imgAppIcon.setImageDrawable(icon));
             } catch (Exception ignored) {}
-        });
+        }).start();
     }
 
     // ── Load existing settings from DB ────────────────────────
 
     private void loadExistingSettings() {
-        AsyncTask.execute(() -> {
+        new Thread(() -> {
             AppRestriction existing = db.appRestrictionDao().getByPackageName(packageName);
 
             runOnUiThread(() -> {
@@ -97,7 +96,7 @@ public class AppDetailActivity extends AppCompatActivity {
                 }
                 populateUI();
             });
-        });
+        }).start();
     }
 
     // ── Populate UI from restriction object ───────────────────
@@ -389,7 +388,7 @@ public class AppDetailActivity extends AppCompatActivity {
         restriction.cooldownMinutes = cooldownMinutes;
 
         // Save to DB on background thread
-        AsyncTask.execute(() -> {
+        new Thread(() -> {
             // Pre-populate totalUsedMs from system so enforcement starts accurately
             if (restriction.isRestricted) {
                 String today = TimeUtils.todayString();
@@ -474,7 +473,7 @@ public class AppDetailActivity extends AppCompatActivity {
     }
 
     private void loadTodayUsage() {
-        AsyncTask.execute(() -> {
+        new Thread(() -> {
             // Use the shared UsageCalculator — same algorithm as enforcement
             long usedMs = UsageCalculator.getScreenTimeToday(this, packageName);
             runOnUiThread(() -> {
@@ -494,7 +493,7 @@ public class AppDetailActivity extends AppCompatActivity {
                 }
                 binding.txtUsageToday.setText("📊 Used today: ~" + display);
             });
-        });
+        }).start();
     }
 
     @Override

@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -119,7 +118,7 @@ public class AppListActivity extends AppCompatActivity {
 
     private void loadInstalledApps() {
         binding.progressBar.setVisibility(View.VISIBLE);
-        AsyncTask.execute(() -> {
+        new Thread(() -> {
             PackageManager pm = getPackageManager();
 
             // Use queryIntentActivities instead of getInstalledApplications
@@ -159,7 +158,7 @@ public class AppListActivity extends AppCompatActivity {
                 allApps = appList;
                 adapter.updateList(appList);
             });
-        });
+        }).start();
     }
 
     @Override

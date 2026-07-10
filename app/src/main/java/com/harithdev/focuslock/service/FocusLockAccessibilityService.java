@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -54,11 +55,12 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
     private static final String TAG = "FocusLock";
 
-    /** Grace period before a session is considered "exited". 2 seconds handles
-     *  MIUI transition overlays (~200ms) and within-app navigation (~600ms).
-     *  Internet speed is irrelevant — window events fire when an Activity
-     *  OPENS, not when its content finishes loading over the network. */
     private static final long SESSION_CLOSE_DEBOUNCE_MS = 2_000;
+
+    // ── FIX 8: Clock manipulation guard ───────────────────────────────
+    private static final String PREFS_NAME       = "focuslock_prefs";
+    private static final String KEY_LAST_KNOWN_MS = "last_known_timestamp_ms";
+    private static final long   CLOCK_TOLERANCE_MS = 5 * 60_000L; // 5 min
 
     // ── Shared state (read by UsageTrackingService) ────────────────────
     public static volatile String currentForegroundApp = null;
@@ -139,7 +141,21 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     private void handleWindowChange(String newPkg) {
         long now = System.currentTimeMillis();
 
-        // ── Step 1: Handle session close when user moves away ─────────────
+        // ── FIX 8: Reject clock-manipulation attempts ─────────────────────
+        // If the system clock jumped backwards by more than CLOCK_TOLERANCE_MS,
+        // the user likely set their date backwards to bypass the daily limit.
+        // We reject this event cycle entirely — no session changes, no new usage.
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        long lastKnownMs = prefs.getLong(KEY_LAST_KNOWN_MS, 0);
+        if (lastKnownMs > 0 && now < lastKnownMs - CLOCK_TOLERANCE_MS) {
+            Log.w(TAG, "⚠️ Clock went backwards by " + (lastKnownMs - now) / 1000
+                    + "s — ignoring accessibility event (likely date manipulation)");
+            return;
+        }
+        if (now > lastKnownMs) {
+            prefs.edit().putLong(KEY_LAST_KNOWN_MS, now).apply();
+        }
+
         if (activeRestrictedPkg != null && !activeRestrictedPkg.equals(newPkg)) {
             if (isSafeApp(newPkg)) {
                 // Transient system overlay (MIUI animation, notification shade) —
