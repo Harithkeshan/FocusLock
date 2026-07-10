@@ -28,6 +28,14 @@ public class TimeUtils {
         return DATE_FORMAT.format(new Date());
     }
 
+    /** Returns yesterday's date as "yyyy-MM-dd" — used to carry over
+     *  cooldowns that span the midnight boundary. */
+    public static String yesterdayString() {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DATE, -1);
+        return DATE_FORMAT.format(cal.getTime());
+    }
+
     // ── Sleep mode helpers ────────────────────────────────────
 
     /**

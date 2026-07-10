@@ -22,6 +22,7 @@ import com.harithdev.focuslock.model.AppRestriction;
 import com.harithdev.focuslock.service.UsageTrackingService;
 import com.harithdev.focuslock.ui.detail.AppDetailActivity;
 import com.harithdev.focuslock.ui.permission.PermissionActivity;
+import com.harithdev.focuslock.util.MiuiHelper;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,7 +56,36 @@ public class AppListActivity extends AppCompatActivity {
 
         setupRecyclerView();
         setupSearch();
+        setupMiuiBanner();
         loadInstalledApps();
+    }
+
+    // ── FIX 1: MIUI battery optimization warning ──────────────────────
+
+    /**
+     * Shows a banner warning on Xiaomi/POCO/Redmi devices if Android's
+     * battery optimization is still active for FocusLock.
+     *
+     * "Disable Battery Saver" → requests Android's standard whitelist dialog.
+     * "Enable Autostart"      → opens MIUI Security Center autostart screen
+     *                           (user must manually toggle FocusLock on).
+     *
+     * The banner is re-evaluated every onResume() so it auto-dismisses
+     * as soon as the user has completed both steps.
+     */
+    private void setupMiuiBanner() {
+        // Buttons are wired once in onCreate; visibility is toggled in onResume
+        binding.btnDisableBatteryOpt.setOnClickListener(v ->
+                MiuiHelper.requestIgnoreBatteryOptimizations(this));
+
+        binding.btnMiuiAutostart.setOnClickListener(v ->
+                MiuiHelper.openMiuiAutostart(this));
+    }
+
+    private void checkMiuiBanner() {
+        // Only show if device is Xiaomi AND battery optimization is still on
+        boolean show = MiuiHelper.shouldShowWarning(this);
+        binding.bannerMiuiWarning.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
     private void setupRecyclerView() {
@@ -135,6 +165,9 @@ public class AppListActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        // Re-check MIUI banner every time the user comes back (e.g. after
+        // visiting battery settings — if fixed, banner disappears automatically)
+        checkMiuiBanner();
         if (!allApps.isEmpty()) loadInstalledApps();
     }
 

@@ -2,7 +2,10 @@ package com.harithdev.focuslock.service;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -14,34 +17,35 @@ import com.harithdev.focuslock.model.DailyUsage;
 import com.harithdev.focuslock.ui.block.BlockActivity;
 import com.harithdev.focuslock.util.TimeUtils;
 
+import java.util.List;
+
 /**
  * FocusLockAccessibilityService — real-time app switching monitor.
  *
- * Triggered on every TYPE_WINDOW_STATE_CHANGED event.
- * This is the primary enforcement engine.
+ * ── Critical Fixes Applied ──────────────────────────────────────────────
  *
- * ── Bug fix: debounced session close ──────────────────────────────────
+ * FIX 2 · Screen-off inflates session timer
+ *   BroadcastReceiver listens to ACTION_SCREEN_OFF / ACTION_SCREEN_ON.
+ *   When the screen goes off, elapsed time is saved and the timer pauses
+ *   (sessionStartMs = 0). When screen comes back, the timer resumes from now.
+ *   This prevents "phantom" usage being counted while the phone is locked.
  *
- * Problem (v1): On MIUI/Xiaomi, navigating WITHIN an app (e.g. opening
- * Facebook Stories, tapping Comments) fires a brief system transition
- * event (com.android.systemui, com.miui.home, etc.) BEFORE the in-app
- * Activity arrives. The old code closed the session immediately on that
- * brief system event → false "early exit" block was shown.
+ * FIX 3 · Stale session after phone restart / service crash
+ *   onServiceConnected() scans the DB for any rows where inActiveSession=1.
+ *   These are orphaned sessions from a previous life of the process. They
+ *   are closed (inActiveSession=0, sessionStartTimeMs=0) WITHOUT adding
+ *   any extra time, so the user doesn't lose or gain session time unfairly.
  *
- * Fix (v2): Session closes are now DEBOUNCED by 2 seconds when the new
- * window belongs to a safe/system app. If the restricted app (or any other
- * non-system app) comes to the foreground within 2 seconds, the pending
- * close is cancelled and the session continues uninterrupted.
+ * FIX 4 · Cooldown erased at midnight
+ *   When creating a brand-new DailyUsage row for today, getOrCreateUsage()
+ *   checks yesterday's row. If that cooldown is still in the future, it is
+ *   carried over to today's row — so a 40-min cooldown that started at
+ *   11:58 PM still blocks the app until 12:38 AM the next day.
  *
- * Internet speed is NOT a factor — TYPE_WINDOW_STATE_CHANGED fires when
- * an Android Activity WINDOW opens (immediate), not when its content loads.
- *
- * ── Block reasons ──────────────────────────────────────────────────────
- *   REASON_SLEEP           → user opened app during sleep window
- *   REASON_EARLY_EXIT      → user re-opened during B2 cooldown
- *   REASON_SESSION_TIMEOUT → user re-opened during B1 cooldown
- *   REASON_LIMIT           → daily screen time exceeded (no-split mode)
- *   REASON_ALL_SESSIONS    → all N session slots consumed (split mode)
+ * ── Other fixes ─────────────────────────────────────────────────────────
+ *   • 2-second debounce on session close (MIUI overlay false-exit fix)
+ *   • Expanded isSafeApp() list for MIUI system packages
+ *   • onDestroy() unregisters screen receiver and cancels pending timers
  *
  * File location:
  *   app/src/main/java/com/harithdev/focuslock/service/FocusLockAccessibilityService.java
@@ -50,28 +54,41 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
     private static final String TAG = "FocusLock";
 
-    /** Grace period before a session is considered "exited". 2 seconds handles:
-     *  - MIUI transition overlays (< 400ms)
-     *  - Facebook Stories / Comments in-app navigation (< 600ms)
-     *  - Any other brief system-level window events during animations
-     *  Internet speed has NO effect on this — window events fire when the
-     *  Activity OPENS, not when its content finishes loading. */
+    /** Grace period before a session is considered "exited". 2 seconds handles
+     *  MIUI transition overlays (~200ms) and within-app navigation (~600ms).
+     *  Internet speed is irrelevant — window events fire when an Activity
+     *  OPENS, not when its content finishes loading over the network. */
     private static final long SESSION_CLOSE_DEBOUNCE_MS = 2_000;
 
     // ── Shared state (read by UsageTrackingService) ────────────────────
     public static volatile String currentForegroundApp = null;
     public static volatile long   lastEventTime        = 0;
 
-    // ── Internal session state ─────────────────────────────────────────
-    private volatile String activeRestrictedPkg = null;
-    private volatile long   sessionStartMs      = 0;
+    // ── Session state ──────────────────────────────────────────────────
+    private volatile String activeRestrictedPkg  = null;
+    /** Wall-clock ms when the CURRENT screen-on interval started for this
+     *  session. Zero means the session is paused (screen is off). */
+    private volatile long   sessionStartMs       = 0;
+    /** Accumulated screen time for the current session BEFORE the last
+     *  screen-on interval. Used to correctly pause/resume across lock events. */
+    private volatile long   sessionAccumulatedMs = 0;
 
     // ── Debounced session-close ────────────────────────────────────────
-    // Runs on the main thread; holds a pending close that is cancelled if the
-    // restricted app (or any real app) returns within SESSION_CLOSE_DEBOUNCE_MS.
     private final Handler  sessionCloseHandler = new Handler(Looper.getMainLooper());
     private       Runnable pendingSessionClose = null;
     private       String   pendingClosePkg     = null;
+
+    // ── FIX 2: Screen-off receiver ────────────────────────────────────
+    private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+                handleScreenOff();
+            } else if (Intent.ACTION_SCREEN_ON.equals(intent.getAction())) {
+                handleScreenOn();
+            }
+        }
+    };
 
     // ══════════════════════════════════════════════════════════════════════
     //  Accessibility event entry point
@@ -91,40 +108,52 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    //  Core logic
+    //  FIX 2 — Screen on / off handlers
+    // ══════════════════════════════════════════════════════════════════════
+
+    /** Screen turned off — pause the session timer so we don't count
+     *  locked-screen time as foreground app usage. */
+    private void handleScreenOff() {
+        if (activeRestrictedPkg != null && sessionStartMs > 0) {
+            long now     = System.currentTimeMillis();
+            long elapsed = now - sessionStartMs;
+            sessionAccumulatedMs += elapsed;
+            sessionStartMs = 0;  // 0 = paused
+            Log.d(TAG, "📴 Screen OFF — pausing session for " + activeRestrictedPkg
+                    + " (+" + elapsed / 1000 + "s, total=" + sessionAccumulatedMs / 1000 + "s)");
+        }
+    }
+
+    /** Screen turned back on — resume the session timer from now. */
+    private void handleScreenOn() {
+        if (activeRestrictedPkg != null && sessionStartMs == 0) {
+            sessionStartMs = System.currentTimeMillis();
+            Log.d(TAG, "📱 Screen ON — resuming session for " + activeRestrictedPkg);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Core enforcement logic
     // ══════════════════════════════════════════════════════════════════════
 
     private void handleWindowChange(String newPkg) {
         long now = System.currentTimeMillis();
 
-        // ── Step 1: Handle session close when the user moves away ─────────
-        //
-        // We differentiate two cases:
-        //
-        //   A) newPkg is a SAFE / SYSTEM app (launcher, systemui, etc.)
-        //      → Could be a transient MIUI overlay during within-app navigation.
-        //      → DEBOUNCE: schedule close in 2s. If the restricted app (or any
-        //        real app) returns within 2s, the close is cancelled.
-        //
-        //   B) newPkg is a REAL (non-safe) app other than the current session pkg
-        //      → User definitely moved to another non-system app.
-        //      → CLOSE IMMEDIATELY (cancel any pending debounce first).
-        //
+        // ── Step 1: Handle session close when user moves away ─────────────
         if (activeRestrictedPkg != null && !activeRestrictedPkg.equals(newPkg)) {
             if (isSafeApp(newPkg)) {
-                // Case A — might be a transient overlay, debounce the close
+                // Transient system overlay (MIUI animation, notification shade) —
+                // debounce: give the restricted app 2 seconds to come back.
                 schedulePendingClose(activeRestrictedPkg);
-                // We still return here (safe app, nothing to enforce)
                 return;
             } else {
-                // Case B — user went to a different real app, close immediately
+                // User moved to a real non-restricted app — close immediately.
                 cancelPendingClose();
                 closeActiveSession(activeRestrictedPkg, now);
             }
         }
 
-        // ── Step 2: If the restricted app came back, cancel any pending close ──
-        // Handles: Stories back-press, Comments loading, any within-app return
+        // ── Step 2: If the restricted app returned, cancel pending close ───
         if (activeRestrictedPkg != null && activeRestrictedPkg.equals(newPkg)) {
             cancelPendingClose();
         }
@@ -137,7 +166,6 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         // ── Step 4: Look up restriction ────────────────────────────────────
         FocusLockDatabase db = FocusLockDatabase.getInstance(this);
         AppRestriction restriction = db.appRestrictionDao().getByPackageName(newPkg);
-
         if (restriction == null || !restriction.isRestricted) {
             Log.d(TAG, "✅ Not restricted: " + newPkg);
             return;
@@ -196,55 +224,12 @@ public class FocusLockAccessibilityService extends AccessibilityService {
             usage.currentSessionUsedMs = 0;
             db.dailyUsageDao().update(usage);
 
-            activeRestrictedPkg = newPkg;
-            sessionStartMs      = now;
+            activeRestrictedPkg  = newPkg;
+            sessionStartMs       = now;
+            sessionAccumulatedMs = 0;
         }
 
         Log.d(TAG, "✅ " + newPkg + " allowed — session active");
-    }
-
-    // ══════════════════════════════════════════════════════════════════════
-    //  Debounced session close helpers
-    // ══════════════════════════════════════════════════════════════════════
-
-    /**
-     * Schedules closeActiveSession() for [pkg] to fire after
-     * SESSION_CLOSE_DEBOUNCE_MS milliseconds.
-     *
-     * If the restricted app returns before the timer fires, call
-     * cancelPendingClose() to abort it — the session continues as if
-     * the user never left.
-     *
-     * Must be called from any thread; Handler is main-thread-safe.
-     */
-    private synchronized void schedulePendingClose(final String pkg) {
-        cancelPendingClose();            // cancel any previous pending close
-        pendingClosePkg = pkg;
-        pendingSessionClose = () -> {
-            // Double-check the package hasn't changed since we scheduled
-            if (pkg.equals(pendingClosePkg)) {
-                Log.d(TAG, "⏰ Debounce fired — closing session for " + pkg);
-                new Thread(() -> closeActiveSession(pkg, System.currentTimeMillis())).start();
-            }
-            pendingSessionClose = null;
-            pendingClosePkg     = null;
-        };
-        sessionCloseHandler.postDelayed(pendingSessionClose, SESSION_CLOSE_DEBOUNCE_MS);
-        Log.d(TAG, "⏱️ Session close debounce started for " + pkg + " (" + SESSION_CLOSE_DEBOUNCE_MS + "ms)");
-    }
-
-    /**
-     * Cancels a pending debounced session close (if any).
-     * Call this when the restricted app returns to the foreground,
-     * or when a real (non-safe) app takes over and we close immediately.
-     */
-    private synchronized void cancelPendingClose() {
-        if (pendingSessionClose != null) {
-            sessionCloseHandler.removeCallbacks(pendingSessionClose);
-            pendingSessionClose = null;
-            pendingClosePkg     = null;
-            Log.d(TAG, "❌ Pending session close cancelled (app returned)");
-        }
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -259,15 +244,21 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         DailyUsage usage = db.dailyUsageDao().getUsage(pkg, today);
 
         if (usage == null || !usage.inActiveSession) {
-            activeRestrictedPkg = null;
-            sessionStartMs      = 0;
+            activeRestrictedPkg  = null;
+            sessionStartMs       = 0;
+            sessionAccumulatedMs = 0;
             return;
         }
 
-        long sessionMs = (sessionStartMs > 0) ? (now - sessionStartMs) : 0;
+        // FIX 2: Use pause-aware elapsed time instead of raw wall-clock.
+        // If the screen was OFF when this close fires, sessionStartMs == 0,
+        // so we don't add any live interval (it was already accumulated on screen-off).
+        long liveMs    = (sessionStartMs > 0) ? (now - sessionStartMs) : 0;
+        long sessionMs = sessionAccumulatedMs + liveMs;
         if (sessionMs < 0) sessionMs = 0;
 
-        Log.d(TAG, "⏱️ Screen time this session: " + (sessionMs / 1000) + "s");
+        Log.d(TAG, "⏱️ Actual screen time this session: " + (sessionMs / 1000) + "s"
+                + " (live=" + liveMs / 1000 + "s, accumulated=" + sessionAccumulatedMs / 1000 + "s)");
 
         usage.totalUsedMs          += sessionMs;
         usage.currentSessionUsedMs += sessionMs;
@@ -279,18 +270,77 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         if (restriction != null && restriction.splitSessions) {
             usage.inCooldown          = true;
             usage.cooldownEndsAtMs    = now + (restriction.cooldownMinutes * 60_000L);
-            usage.isEarlyExitCooldown = true;    // marks this as a B2 cooldown
+            usage.isEarlyExitCooldown = true;
             Log.d(TAG, "🧘 Early exit — cooldown until " + usage.cooldownEndsAtMs);
         }
 
         db.dailyUsageDao().update(usage);
-        activeRestrictedPkg = null;
-        sessionStartMs      = 0;
+        activeRestrictedPkg  = null;
+        sessionStartMs       = 0;
+        sessionAccumulatedMs = 0;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Debounced session-close helpers (MIUI overlay false-exit fix)
+    // ══════════════════════════════════════════════════════════════════════
+
+    private synchronized void schedulePendingClose(final String pkg) {
+        cancelPendingClose();
+        pendingClosePkg = pkg;
+        pendingSessionClose = () -> {
+            if (pkg.equals(pendingClosePkg)) {
+                Log.d(TAG, "⏰ Debounce fired — closing session for " + pkg);
+                new Thread(() -> closeActiveSession(pkg, System.currentTimeMillis())).start();
+            }
+            pendingSessionClose = null;
+            pendingClosePkg     = null;
+        };
+        sessionCloseHandler.postDelayed(pendingSessionClose, SESSION_CLOSE_DEBOUNCE_MS);
+        Log.d(TAG, "⏱️ Debounce started for " + pkg + " (" + SESSION_CLOSE_DEBOUNCE_MS + "ms)");
+    }
+
+    private synchronized void cancelPendingClose() {
+        if (pendingSessionClose != null) {
+            sessionCloseHandler.removeCallbacks(pendingSessionClose);
+            pendingSessionClose = null;
+            pendingClosePkg     = null;
+            Log.d(TAG, "❌ Pending close cancelled (app returned within grace period)");
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════
     //  Helpers
     // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * FIX 4 — Cooldown carryover past midnight.
+     *
+     * When creating a brand-new today row, check yesterday's record. If the
+     * yesterday row still has an active cooldown (cooldownEndsAtMs > now), carry
+     * it over to today's row. This prevents a 40-min cooldown that started at
+     * 11:58 PM from being silently cleared at midnight.
+     */
+    private DailyUsage getOrCreateUsage(FocusLockDatabase db, String pkg, String today) {
+        DailyUsage usage = db.dailyUsageDao().getUsage(pkg, today);
+        if (usage == null) {
+            usage = new DailyUsage(pkg, today);
+
+            // Check if yesterday had an active cooldown that still applies now
+            String yesterday = TimeUtils.yesterdayString();
+            DailyUsage prev  = db.dailyUsageDao().getUsage(pkg, yesterday);
+            if (prev != null && prev.inCooldown
+                    && prev.cooldownEndsAtMs > System.currentTimeMillis()) {
+                usage.inCooldown          = true;
+                usage.cooldownEndsAtMs    = prev.cooldownEndsAtMs;
+                usage.isEarlyExitCooldown = prev.isEarlyExitCooldown;
+                Log.d(TAG, "🌛 Carried over midnight cooldown for " + pkg
+                        + " (ends at " + prev.cooldownEndsAtMs + ")");
+            }
+
+            db.dailyUsageDao().insert(usage);
+        }
+        return usage;
+    }
 
     private void showLimitBlock(String pkg, AppRestriction restriction) {
         if (restriction.splitSessions) {
@@ -307,50 +357,30 @@ public class FocusLockAccessibilityService extends AccessibilityService {
             return usage.sessionsUsedToday >= restriction.sessionCount
                     && !usage.inActiveSession;
         } else {
-            long dailyLimitMs = restriction.dailyLimitMinutes * 60_000L;
-            return usage.totalUsedMs >= dailyLimitMs;
+            return usage.totalUsedMs >= (restriction.dailyLimitMinutes * 60_000L);
         }
     }
 
-    private DailyUsage getOrCreateUsage(FocusLockDatabase db, String pkg, String today) {
-        DailyUsage usage = db.dailyUsageDao().getUsage(pkg, today);
-        if (usage == null) {
-            usage = new DailyUsage(pkg, today);
-            db.dailyUsageDao().insert(usage);
-            Log.d(TAG, "📝 New DailyUsage for " + pkg);
-        }
-        return usage;
-    }
-
-    /**
-     * Returns true for packages that should NEVER trigger a session close or
-     * block enforcement. These are launchers, system UI, and FocusLock itself.
-     *
-     * IMPORTANT: Keep this list in sync. If a system package triggers false
-     * session closes, add it here rather than reducing the debounce timeout.
-     */
     private boolean isSafeApp(String pkg) {
         if (pkg == null) return true;
-        // FocusLock itself
         if (pkg.startsWith("com.harithdev.focuslock")) return true;
-        // Android system
-        if (pkg.equals("android")) return true;
-        if (pkg.equals("com.android.systemui")) return true;
-        // Launchers / home
+        if (pkg.equals("android") || pkg.equals("com.android.systemui")) return true;
         String lower = pkg.toLowerCase();
         if (lower.contains("launcher")) return true;
         if (lower.contains("home"))     return true;
         if (lower.contains("shell"))    return true;
-        // MIUI-specific
-        if (pkg.equals("com.miui.home"))                 return true;
-        if (pkg.equals("com.miui.systemui.plugin"))      return true;
-        if (pkg.equals("miui.systemui.plugin"))          return true;
-        if (pkg.equals("com.miui.securitycenter"))       return true;  // ← added
-        if (pkg.equals("com.miui.system"))               return true;  // ← added
-        if (pkg.equals("com.miui.packageinstaller"))     return true;  // ← added
+        // MIUI-specific system packages
+        if (pkg.equals("com.miui.home"))                       return true;
+        if (pkg.equals("com.miui.systemui.plugin"))            return true;
+        if (pkg.equals("miui.systemui.plugin"))                return true;
+        if (pkg.equals("com.miui.securitycenter"))             return true;
+        if (pkg.equals("com.miui.system"))                     return true;
+        if (pkg.equals("com.miui.packageinstaller"))           return true;
+        if (pkg.equals("com.miui.screenshot"))                 return true;
+        if (pkg.equals("com.miui.contentextension"))           return true;
         // Common Android launchers
-        if (pkg.equals("com.sec.android.app.launcher")) return true;
-        if (pkg.equals("com.android.launcher3"))         return true;
+        if (pkg.equals("com.sec.android.app.launcher"))        return true;
+        if (pkg.equals("com.android.launcher3"))               return true;
         if (pkg.equals("com.google.android.apps.nexuslauncher")) return true;
         return false;
     }
@@ -372,6 +402,62 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     // ══════════════════════════════════════════════════════════════════════
 
     @Override
+    protected void onServiceConnected() {
+        // Configure which events we want
+        AccessibilityServiceInfo info = new AccessibilityServiceInfo();
+        info.eventTypes          = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED;
+        info.feedbackType        = AccessibilityServiceInfo.FEEDBACK_GENERIC;
+        info.notificationTimeout = 100;
+        setServiceInfo(info);
+        Log.d(TAG, "✅ Accessibility Service connected");
+
+        // FIX 2: Register screen on/off receiver
+        IntentFilter screenFilter = new IntentFilter();
+        screenFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        screenFilter.addAction(Intent.ACTION_SCREEN_ON);
+        registerReceiver(screenReceiver, screenFilter);
+        Log.d(TAG, "📺 Screen on/off receiver registered");
+
+        // FIX 3: Clean up stale sessions left by a crash or phone restart.
+        // Any session still marked inActiveSession=1 at service start is orphaned.
+        // We close them (set flag to false) WITHOUT adding any extra screen time,
+        // so the user's session counts are not unfairly inflated.
+        new Thread(this::cleanupStaleSessions).start();
+    }
+
+    /**
+     * FIX 3 — Clears orphaned inActiveSession=1 rows left from a previous
+     * process lifecycle (crash, reboot, forced stop by MIUI).
+     *
+     * Why no extra time is added: we don't know how long ago the process died,
+     * so adding (now - old_sessionStartMs) would be wildly inaccurate.
+     * The session that was in progress is simply treated as "already counted"
+     * and the session slot is preserved for the user.
+     */
+    private void cleanupStaleSessions() {
+        try {
+            FocusLockDatabase db   = FocusLockDatabase.getInstance(this);
+            String today           = TimeUtils.todayString();
+            List<DailyUsage> stale = db.dailyUsageDao().getAllActiveSessions(today);
+
+            if (!stale.isEmpty()) {
+                Log.d(TAG, "🧹 Cleaning up " + stale.size() + " stale session(s) from previous process");
+                for (DailyUsage s : stale) {
+                    s.inActiveSession    = false;
+                    s.sessionStartTimeMs = 0;
+                    // Do NOT change totalUsedMs or sessionsUsedToday — those
+                    // were already recorded when the session started. We just
+                    // mark the session as closed so the next open starts fresh.
+                    db.dailyUsageDao().update(s);
+                    Log.d(TAG, "   ↳ Closed stale session for " + s.packageName);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error cleaning stale sessions: " + e.getMessage());
+        }
+    }
+
+    @Override
     public void onInterrupt() {
         cancelPendingClose();
         if (activeRestrictedPkg != null) {
@@ -383,15 +469,10 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     public void onDestroy() {
         super.onDestroy();
         cancelPendingClose();
-    }
-
-    @Override
-    protected void onServiceConnected() {
-        AccessibilityServiceInfo info = new AccessibilityServiceInfo();
-        info.eventTypes          = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED;
-        info.feedbackType        = AccessibilityServiceInfo.FEEDBACK_GENERIC;
-        info.notificationTimeout = 100;
-        setServiceInfo(info);
-        Log.d(TAG, "✅ Accessibility Service connected");
+        // FIX 2: Unregister screen receiver to avoid leaks
+        try {
+            unregisterReceiver(screenReceiver);
+        } catch (Exception ignored) {}
+        Log.d(TAG, "🛑 Accessibility Service destroyed");
     }
 }

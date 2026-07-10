@@ -56,6 +56,13 @@ public interface DailyUsageDao {
     DailyUsage getActiveUsage(String date);
 
     /**
+     * Returns ALL active sessions for today — used on service start
+     * to detect and clean up stale sessions left by a crash or reboot.
+     */
+    @Query("SELECT * FROM daily_usage WHERE date = :date AND inActiveSession = 1")
+    java.util.List<DailyUsage> getAllActiveSessions(String date);
+
+    /**
      * Delete all usage records older than today.
      * Called by MidnightResetWorker to keep the DB clean.
      *
