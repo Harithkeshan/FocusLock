@@ -389,6 +389,9 @@ public class AppDetailActivity extends AppCompatActivity {
 
         // Save to DB on background thread
         new Thread(() -> {
+            // MUST insert parent (restriction) first to satisfy SQLite Foreign Key constraints
+            db.appRestrictionDao().insert(restriction); // REPLACE if exists
+
             // Pre-populate totalUsedMs from system so enforcement starts accurately
             if (restriction.isRestricted) {
                 String today = TimeUtils.todayString();
@@ -422,12 +425,11 @@ public class AppDetailActivity extends AppCompatActivity {
 
                 db.dailyUsageDao().update(usage);
             }
-            db.appRestrictionDao().insert(restriction); // REPLACE if exists
             runOnUiThread(() -> {
                 android.widget.Toast.makeText(this, "Settings saved ✓", android.widget.Toast.LENGTH_SHORT).show();
                 finish();
             });
-        });
+        }).start();
     }
 
     // ── Helpers ───────────────────────────────────────────────

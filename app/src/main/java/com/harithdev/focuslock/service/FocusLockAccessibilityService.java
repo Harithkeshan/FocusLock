@@ -12,6 +12,8 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 
+import android.view.accessibility.AccessibilityNodeInfo;
+
 import com.harithdev.focuslock.database.FocusLockDatabase;
 import com.harithdev.focuslock.model.AppRestriction;
 import com.harithdev.focuslock.model.DailyUsage;
@@ -55,7 +57,15 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
     private static final String TAG = "FocusLock";
 
-    private static final long SESSION_CLOSE_DEBOUNCE_MS = 2_000;
+    // ── Debounce Timeouts ──────────────────────────────────────────────────
+    // For launchers (Home screens), we assume the user left the app intentionally.
+    // We give a small 2-second grace period for accidental presses or quick checks.
+    private static final long HOME_DEBOUNCE_MS = 2_000;
+
+    // For transient system UI (like the notification shade or volume panel),
+    // the user is usually just checking a notification. We give a much larger
+    // grace period. If they dismiss the shade within this time, the session resumes.
+    private static final long TRANSIENT_UI_DEBOUNCE_MS = 10_000;
 
     // ── FIX 8: Clock manipulation guard ───────────────────────────────
     private static final String PREFS_NAME       = "focuslock_prefs";
@@ -63,6 +73,7 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     private static final long   CLOCK_TOLERANCE_MS = 5 * 60_000L; // 5 min
 
     // ── Shared state (read by UsageTrackingService) ────────────────────
+    public static volatile boolean isServiceRunning     = false;
     public static volatile String currentForegroundApp = null;
     public static volatile long   lastEventTime        = 0;
 
@@ -98,15 +109,31 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
-        if (event.getPackageName() == null) return;
+        int type = event.getEventType();
+        if (type != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && type != AccessibilityEvent.TYPE_WINDOWS_CHANGED) return;
 
-        String newPkg = event.getPackageName().toString();
+        String newPkg = null;
+        if (event.getPackageName() != null) {
+            newPkg = event.getPackageName().toString();
+        }
+
+        // For TYPE_WINDOWS_CHANGED (e.g., when notification shade closes),
+        // the event package might be SystemUI, but the ACTIVE window is now Facebook.
+        // getRootInActiveWindow() gives us the true foreground package.
+        if (type == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            if (root != null && root.getPackageName() != null) {
+                newPkg = root.getPackageName().toString();
+            }
+        }
+
+        if (newPkg == null) return;
+
         currentForegroundApp = newPkg;
         lastEventTime        = System.currentTimeMillis();
 
-        Log.d(TAG, "🪟 Window → " + newPkg);
-        new Thread(() -> handleWindowChange(newPkg)).start();
+        String finalPkg = newPkg;
+        new Thread(() -> handleWindowChange(finalPkg)).start();
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -158,9 +185,10 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
         if (activeRestrictedPkg != null && !activeRestrictedPkg.equals(newPkg)) {
             if (isSafeApp(newPkg)) {
-                // Transient system overlay (MIUI animation, notification shade) —
-                // debounce: give the restricted app 2 seconds to come back.
-                schedulePendingClose(activeRestrictedPkg);
+                // Transient system overlay (notification shade) OR Home screen.
+                // Give the restricted app a grace period to come back.
+                long debounceTime = isHomeApp(newPkg) ? HOME_DEBOUNCE_MS : TRANSIENT_UI_DEBOUNCE_MS;
+                schedulePendingClose(activeRestrictedPkg, debounceTime);
                 return;
             } else {
                 // User moved to a real non-restricted app — close immediately.
@@ -203,7 +231,7 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         if (usage.inCooldown) {
             if (now < usage.cooldownEndsAtMs) {
                 if (isDailyLimitReached(restriction, usage)) {
-                    showLimitBlock(newPkg, restriction);
+                    showLimitBlock(newPkg, restriction, usage);
                 } else {
                     String cooldownReason = usage.isEarlyExitCooldown
                             ? BlockActivity.REASON_EARLY_EXIT
@@ -224,7 +252,7 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
         // 5c. Daily / session limit already reached?
         if (isDailyLimitReached(restriction, usage)) {
-            showLimitBlock(newPkg, restriction);
+            showLimitBlock(newPkg, restriction, usage);
             return;
         }
 
@@ -300,7 +328,7 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     //  Debounced session-close helpers (MIUI overlay false-exit fix)
     // ══════════════════════════════════════════════════════════════════════
 
-    private synchronized void schedulePendingClose(final String pkg) {
+    private synchronized void schedulePendingClose(final String pkg, long delayMs) {
         cancelPendingClose();
         pendingClosePkg = pkg;
         pendingSessionClose = () -> {
@@ -311,8 +339,8 @@ public class FocusLockAccessibilityService extends AccessibilityService {
             pendingSessionClose = null;
             pendingClosePkg     = null;
         };
-        sessionCloseHandler.postDelayed(pendingSessionClose, SESSION_CLOSE_DEBOUNCE_MS);
-        Log.d(TAG, "⏱️ Debounce started for " + pkg + " (" + SESSION_CLOSE_DEBOUNCE_MS + "ms)");
+        sessionCloseHandler.postDelayed(pendingSessionClose, delayMs);
+        Log.d(TAG, "⏱️ Debounce started for " + pkg + " (" + delayMs + "ms)");
     }
 
     private synchronized void cancelPendingClose() {
@@ -358,8 +386,9 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         return usage;
     }
 
-    private void showLimitBlock(String pkg, AppRestriction restriction) {
-        if (restriction.splitSessions) {
+    private void showLimitBlock(String pkg, AppRestriction restriction, DailyUsage usage) {
+        boolean dailyLimitHit = usage.totalUsedMs >= (restriction.dailyLimitMinutes * 60_000L);
+        if (restriction.splitSessions && usage.sessionsUsedToday >= restriction.sessionCount && !usage.inActiveSession && !dailyLimitHit) {
             Log.d(TAG, "🏁 BLOCK — all sessions done (" + restriction.sessionCount + ")");
             showBlock(pkg, BlockActivity.REASON_ALL_SESSIONS, null, 0, restriction.sessionCount);
         } else {
@@ -369,11 +398,12 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     }
 
     private boolean isDailyLimitReached(AppRestriction restriction, DailyUsage usage) {
+        boolean dailyLimitHit = usage.totalUsedMs >= (restriction.dailyLimitMinutes * 60_000L);
         if (restriction.splitSessions) {
-            return usage.sessionsUsedToday >= restriction.sessionCount
-                    && !usage.inActiveSession;
+            boolean allSessionsHit = usage.sessionsUsedToday >= restriction.sessionCount && !usage.inActiveSession;
+            return dailyLimitHit || allSessionsHit;
         } else {
-            return usage.totalUsedMs >= (restriction.dailyLimitMinutes * 60_000L);
+            return dailyLimitHit;
         }
     }
 
@@ -401,6 +431,18 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         return false;
     }
 
+    /**
+     * Differentiates launcher/home apps from transient system UI (like notification shade).
+     */
+    private boolean isHomeApp(String pkg) {
+        if (pkg == null) return false;
+        String lower = pkg.toLowerCase();
+        if (lower.contains("launcher") || lower.contains("home")) return true;
+        if (pkg.equals("com.miui.home") || pkg.equals("com.sec.android.app.launcher")
+                || pkg.equals("com.android.launcher3")) return true;
+        return false;
+    }
+
     private void showBlock(String pkg, String reason,
                            String sleepEnd, long cooldownEndsMs, int sessionCount) {
         Intent intent = new Intent(this, BlockActivity.class);
@@ -419,11 +461,14 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
     @Override
     protected void onServiceConnected() {
+        isServiceRunning = true;
         // Configure which events we want
         AccessibilityServiceInfo info = new AccessibilityServiceInfo();
-        info.eventTypes          = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED;
+        info.eventTypes          = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED | AccessibilityEvent.TYPE_WINDOWS_CHANGED;
         info.feedbackType        = AccessibilityServiceInfo.FEEDBACK_GENERIC;
         info.notificationTimeout = 100;
+        // Retrieve interactive windows is required to use getRootInActiveWindow()
+        info.flags               = AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
         setServiceInfo(info);
         Log.d(TAG, "✅ Accessibility Service connected");
 
@@ -475,6 +520,8 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
     @Override
     public void onInterrupt() {
+        isServiceRunning = false;
+        currentForegroundApp = null;
         cancelPendingClose();
         if (activeRestrictedPkg != null) {
             closeActiveSession(activeRestrictedPkg, System.currentTimeMillis());
@@ -484,6 +531,8 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        isServiceRunning = false;
+        currentForegroundApp = null;
         cancelPendingClose();
         // FIX 2: Unregister screen receiver to avoid leaks
         try {

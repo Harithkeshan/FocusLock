@@ -1,4 +1,19 @@
 <resources>
     <string name="app_name">FocusLock</string>
     <string name="accessibility_description">FocusLock needs accessibility access to detect which app is open and enforce your time limits.</string>
+    
+    <!-- BlockActivity Strings -->
+    <string name="block_title_sleep">Sleep hours, phone down!</string>
+    <string name="block_subtitle_sleep">You set this time aside for rest.\nCome back at %1$s</string>
+    <string name="block_title_session_timeout">Time\'s up for this session!</string>
+    <string name="block_subtitle_session_timeout">You used your full slot — great discipline!\nCooldown ends at %1$s</string>
+    <string name="block_title_early_exit">Good call stepping away!</string>
+    <string name="block_subtitle_early_exit">Leaving early still uses your session.\nCooldown ends at %1$s</string>
+    <string name="block_title_limit">That\'s your daily dose!</string>
+    <string name="block_subtitle_limit">You\'ve used up your time for today.\nFresh start tomorrow — you\'ve got this! 💪</string>
+    <string name="block_title_all_sessions_count">All %1$d sessions done for today!</string>
+    <string name="block_title_all_sessions_no_count">All sessions done for today!</string>
+    <string name="block_subtitle_all_sessions">You\'ve completed all your sessions.\nReset at midnight — well done today!</string>
+    <string name="block_title_fallback">App blocked</string>
+    <string name="block_subtitle_fallback">FocusLock is keeping you on track.</string>
 </resources>

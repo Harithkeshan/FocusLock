@@ -101,9 +101,15 @@ public class AppListActivity extends AppCompatActivity {
     private void setupSearch() {
         binding.searchInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
-            @Override public void onTextChanged(CharSequence s, int st, int b, int c) { filterApps(s.toString()); }
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) { 
+                String query = s.toString();
+                binding.btnClearSearch.setVisibility(query.isEmpty() ? View.GONE : View.VISIBLE);
+                filterApps(query); 
+            }
             @Override public void afterTextChanged(Editable s) {}
         });
+        
+        binding.btnClearSearch.setOnClickListener(v -> binding.searchInput.setText(""));
     }
 
     private void filterApps(String query) {
@@ -156,7 +162,13 @@ public class AppListActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 binding.progressBar.setVisibility(View.GONE);
                 allApps = appList;
-                adapter.updateList(appList);
+                
+                String currentSearch = binding.searchInput.getText().toString();
+                if (!currentSearch.isEmpty()) {
+                    filterApps(currentSearch);
+                } else {
+                    adapter.updateList(appList);
+                }
             });
         }).start();
     }

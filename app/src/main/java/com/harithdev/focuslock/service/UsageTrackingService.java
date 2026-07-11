@@ -149,10 +149,11 @@ public class UsageTrackingService extends Service {
 
         // ── Use Accessibility Service's real-time foreground detection ──
         String foreground = FocusLockAccessibilityService.currentForegroundApp;
-        long   lastUpdate = FocusLockAccessibilityService.lastEventTime;
+        android.os.PowerManager pm = (android.os.PowerManager) getSystemService(android.content.Context.POWER_SERVICE);
+        boolean isInteractive = pm != null && pm.isInteractive();
 
-        if (foreground == null || (now - lastUpdate) > 30_000) {
-            Log.d(TAG, "⚠️ Accessibility data stale or null — skipping cycle");
+        if (foreground == null || !FocusLockAccessibilityService.isServiceRunning || !isInteractive) {
+            Log.d(TAG, "⚠️ Accessibility data stale, screen off, or null — skipping cycle");
             return;
         }
 
@@ -163,9 +164,13 @@ public class UsageTrackingService extends Service {
 
         String today = TimeUtils.todayString();
 
+        // ALWAYS check daily limit safety net first, even in split sessions
+        int dailyStatus = checkDailyLimitSafetyNet(restriction, foreground, now, today);
+        if (dailyStatus == 2) {
+            return;
+        }
+
         if (!restriction.splitSessions) {
-            // Daily-limit-only mode: safety net block + FIX 6 warning
-            checkDailyLimitSafetyNet(restriction, foreground, now, today);
             return;
         }
 
@@ -183,9 +188,11 @@ public class UsageTrackingService extends Service {
         // FIX 6: Send warning when 5 minutes remain in the current session
         long remainingMs = slotDurationMs - totalSessionMs;
         if (remainingMs > 0 && remainingMs <= WARN_THRESHOLD_MS) {
-            String appLabel = getAppLabel(foreground);
-            sendLimitWarning(foreground, today, appLabel,
-                    "session", Math.max(1, (int)(remainingMs / 60_000)));
+            if (dailyStatus != 1) { // Smart prioritization: Skip if Daily Warning is active
+                String appLabel = getAppLabel(foreground);
+                sendLimitWarning(foreground, today, appLabel,
+                        "session", Math.max(1, (int)(remainingMs / 60_000)), usage.sessionsUsedToday);
+            }
         }
 
         if (totalSessionMs >= slotDurationMs) {
@@ -206,13 +213,14 @@ public class UsageTrackingService extends Service {
     }
 
     /**
-     * Safety net for daily-limit-only mode.
+     * Safety net for daily-limit mode (also applies in split-session mode).
      * Also sends the "5 minutes remaining" warning notification (FIX 6).
+     * Returns 2 if blocked, 1 if warning sent/active, 0 if normal.
      */
-    private void checkDailyLimitSafetyNet(AppRestriction restriction,
+    private int checkDailyLimitSafetyNet(AppRestriction restriction,
                                           String foreground, long now, String today) {
         DailyUsage usage = db.dailyUsageDao().getUsage(foreground, today);
-        if (usage == null || !usage.inActiveSession) return;
+        if (usage == null || !usage.inActiveSession) return 0;
 
         long liveElapsedMs = (usage.sessionStartTimeMs > 0) ? (now - usage.sessionStartTimeMs) : 0;
         long totalMs       = usage.totalUsedMs + liveElapsedMs;
@@ -220,10 +228,11 @@ public class UsageTrackingService extends Service {
 
         // FIX 6: Send warning when 5 minutes remain in the daily limit
         long remainingMs = dailyLimitMs - totalMs;
-        if (remainingMs > 0 && remainingMs <= WARN_THRESHOLD_MS) {
+        boolean warningActive = (remainingMs > 0 && remainingMs <= WARN_THRESHOLD_MS);
+        if (warningActive) {
             String appLabel = getAppLabel(foreground);
             sendLimitWarning(foreground, today, appLabel,
-                    "daily", Math.max(1, (int)(remainingMs / 60_000)));
+                    "daily", Math.max(1, (int)(remainingMs / 60_000)), usage.sessionsUsedToday);
         }
 
         if (totalMs >= dailyLimitMs) {
@@ -235,7 +244,9 @@ public class UsageTrackingService extends Service {
             db.dailyUsageDao().update(usage);
 
             showBlockScreen(foreground, BlockActivity.REASON_LIMIT, null, 0, 0);
+            return 2;
         }
+        return warningActive ? 1 : 0;
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -254,12 +265,17 @@ public class UsageTrackingService extends Service {
      * @param appLabel   human-readable app name
      * @param limitType  "session" or "daily"
      * @param minsLeft   approximate minutes remaining (shown in notification)
+     * @param sessionsUsedToday current session index for unique keys
      */
     private void sendLimitWarning(String pkg, String today,
-                                  String appLabel, String limitType, int minsLeft) {
+                                  String appLabel, String limitType, int minsLeft, int sessionsUsedToday) {
         String warnKey = KEY_WARN_PREFIX + pkg + "_" + today + "_" + limitType;
+        if (limitType.equals("session")) {
+            warnKey += "_" + sessionsUsedToday; // Fix Once-Per-Day bug
+        }
+        
         if (prefs.getBoolean(warnKey, false)) {
-            return; // Already sent the warning for this app today
+            return; // Already sent the warning for this app today/session
         }
         prefs.edit().putBoolean(warnKey, true).apply();
 
@@ -273,6 +289,9 @@ public class UsageTrackingService extends Service {
 
         // Notification ID is unique per-app so multiple apps show separate notifications
         int warnNotifId = 2000 + Math.abs(pkg.hashCode() % 1000);
+        if (limitType.equals("session")) {
+            warnNotifId += 1000; // Separate IDs to prevent overwriting
+        }
 
         Notification notification = new NotificationCompat.Builder(this, WARN_CHANNEL_ID)
                 .setContentTitle(title)

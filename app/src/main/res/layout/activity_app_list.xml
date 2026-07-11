@@ -135,7 +135,8 @@
 
         <EditText
             android:id="@+id/search_input"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:hint="Search apps..."
             android:textColor="#f0eeff"
@@ -144,6 +145,17 @@
             android:inputType="text"
             android:maxLines="1"
             android:imeOptions="actionSearch" />
+
+        <TextView
+            android:id="@+id/btn_clear_search"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✕"
+            android:textSize="16sp"
+            android:textColor="#9990bb"
+            android:visibility="gone"
+            android:paddingStart="8dp"
+            android:paddingEnd="4dp" />
 
     </LinearLayout>
 

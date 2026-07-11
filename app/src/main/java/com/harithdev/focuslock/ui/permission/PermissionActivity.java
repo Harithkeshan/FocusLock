@@ -63,12 +63,14 @@ public class PermissionActivity extends AppCompatActivity {
         // Usage Access row
         binding.txtUsageStatus.setText(usageOk ? "✓  Granted" : "Not granted");
         binding.txtUsageStatus.setTextColor(usageOk ? 0xFF4ADE80 : 0xFFF87171);
+        binding.txtUsageStatus.setBackgroundResource(usageOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
         binding.btnGrantUsage.setAlpha(usageOk ? 0.4f : 1.0f);
         binding.btnGrantUsage.setEnabled(!usageOk);
 
         // Overlay row
         binding.txtOverlayStatus.setText(overlayOk ? "✓  Granted" : "Not granted");
         binding.txtOverlayStatus.setTextColor(overlayOk ? 0xFF4ADE80 : 0xFFF87171);
+        binding.txtOverlayStatus.setBackgroundResource(overlayOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
         binding.btnGrantOverlay.setAlpha(overlayOk ? 0.4f : 1.0f);
         binding.btnGrantOverlay.setEnabled(!overlayOk);
 
@@ -76,6 +78,7 @@ public class PermissionActivity extends AppCompatActivity {
         boolean accessibilityOk = hasAccessibilityPermission();
         binding.txtAccessibilityStatus.setText(accessibilityOk ? "✓  Granted" : "Not granted");
         binding.txtAccessibilityStatus.setTextColor(accessibilityOk ? 0xFF4ADE80 : 0xFFF87171);
+        binding.txtAccessibilityStatus.setBackgroundResource(accessibilityOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
         binding.btnGrantAccessibility.setAlpha(accessibilityOk ? 0.4f : 1.0f);
         binding.btnGrantAccessibility.setEnabled(!accessibilityOk);
         binding.btnContinue.setAlpha((usageOk && overlayOk && accessibilityOk) ? 1.0f : 0.4f);

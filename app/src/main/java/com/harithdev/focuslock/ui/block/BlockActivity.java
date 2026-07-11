@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.WindowManager;
 
+import com.harithdev.focuslock.R;
 import com.harithdev.focuslock.databinding.ActivityBlockBinding;
 import com.harithdev.focuslock.util.TimeUtils;
 
@@ -88,65 +89,53 @@ public class BlockActivity extends Activity {
             // ─── 1. SLEEP MODE ────────────────────────────────
             case REASON_SLEEP:
                 binding.txtEmoji.setText("🌙");
-                binding.txtTitle.setText("Sleep hours, phone down!");
-                binding.txtSubtitle.setText(
-                        "You set this time aside for rest.\n"
-                        + "Come back at " + TimeUtils.formatSleepEndTime(sleepEnd != null ? sleepEnd : "")
-                );
+                binding.txtTitle.setText(getString(R.string.block_title_sleep));
+                binding.txtSubtitle.setText(getString(R.string.block_subtitle_sleep,
+                        TimeUtils.formatSleepEndTime(sleepEnd != null ? sleepEnd : "")));
                 break;
 
             // ─── 2. SESSION TIMED OUT (Behaviour 1) ──────────
             // User continuously used the app until their slot ran out
             case REASON_SESSION_TIMEOUT:
                 binding.txtEmoji.setText("⏰");
-                binding.txtTitle.setText("Time's up for this session!");
-                binding.txtSubtitle.setText(
-                        "You used your full slot — great discipline!\n"
-                        + "Cooldown ends at " + TimeUtils.formatCooldownEnd(cooldownEndsMs)
-                );
+                binding.txtTitle.setText(getString(R.string.block_title_session_timeout));
+                binding.txtSubtitle.setText(getString(R.string.block_subtitle_session_timeout,
+                        TimeUtils.formatCooldownEnd(cooldownEndsMs)));
                 break;
 
             // ─── 3. EARLY EXIT COOLDOWN (Behaviour 2) ────────
             // User left the app mid-session; that still counts as a session
             case REASON_EARLY_EXIT:
                 binding.txtEmoji.setText("🧘");
-                binding.txtTitle.setText("Good call stepping away!");
-                binding.txtSubtitle.setText(
-                        "Leaving early still uses your session.\n"
-                        + "Cooldown ends at " + TimeUtils.formatCooldownEnd(cooldownEndsMs)
-                );
+                binding.txtTitle.setText(getString(R.string.block_title_early_exit));
+                binding.txtSubtitle.setText(getString(R.string.block_subtitle_early_exit,
+                        TimeUtils.formatCooldownEnd(cooldownEndsMs)));
                 break;
 
             // ─── 4. DAILY LIMIT REACHED (no sessions mode) ───
             // Cumulative screen time for the day has hit the cap
             case REASON_LIMIT:
                 binding.txtEmoji.setText("🔒");
-                binding.txtTitle.setText("That's your daily dose!");
-                binding.txtSubtitle.setText(
-                        "You've used up your time for today.\n"
-                        + "Fresh start tomorrow — you've got this! 💪"
-                );
+                binding.txtTitle.setText(getString(R.string.block_title_limit));
+                binding.txtSubtitle.setText(getString(R.string.block_subtitle_limit));
                 break;
 
             // ─── 5. ALL SESSIONS EXHAUSTED (sessions mode) ───
             // Every one of the N session slots has been used up
             case REASON_ALL_SESSIONS:
                 String sessionLabel = sessionCount > 0
-                        ? "All " + sessionCount + " sessions done for today!"
-                        : "All sessions done for today!";
+                        ? getString(R.string.block_title_all_sessions_count, sessionCount)
+                        : getString(R.string.block_title_all_sessions_no_count);
                 binding.txtEmoji.setText("🏁");
                 binding.txtTitle.setText(sessionLabel);
-                binding.txtSubtitle.setText(
-                        "You've completed all your sessions.\n"
-                        + "Reset at midnight — well done today!"
-                );
+                binding.txtSubtitle.setText(getString(R.string.block_subtitle_all_sessions));
                 break;
 
             // ─── Fallback (should never happen) ──────────────
             default:
                 binding.txtEmoji.setText("🔒");
-                binding.txtTitle.setText("App blocked");
-                binding.txtSubtitle.setText("FocusLock is keeping you on track.");
+                binding.txtTitle.setText(getString(R.string.block_title_fallback));
+                binding.txtSubtitle.setText(getString(R.string.block_subtitle_fallback));
                 break;
         }
     }
