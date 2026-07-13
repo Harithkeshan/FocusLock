@@ -142,45 +142,37 @@ public class BlockActivity extends Activity {
 
     // ── Recheck loop ──────────────────────────────────────────
 
-    /**
-     * Re-evaluates every 60 seconds whether the block should still show.
-     * Dismissed automatically when:
-     *   • SESSION_TIMEOUT / EARLY_EXIT: cooldown has expired
-     *   • SLEEP: re-check is handled by the service sending a new intent
-     *   • LIMIT / ALL_SESSIONS: never auto-dismissed (wait until midnight)
-     */
     private void startRecheckLoop(String reason, long cooldownEndsMs) {
-        recheck = new Runnable() {
-            @Override
-            public void run() {
-                boolean shouldDismiss = false;
+        if (recheck != null) {
+            handler.removeCallbacks(recheck);
+            recheck = null;
+        }
 
-                if (REASON_SESSION_TIMEOUT.equals(reason) || REASON_EARLY_EXIT.equals(reason)) {
-                    // Dismiss when cooldown has expired
-                    shouldDismiss = System.currentTimeMillis() >= cooldownEndsMs;
-                }
-                // LIMIT and ALL_SESSIONS stay blocked until midnight reset
-                // SLEEP is handled by the service stopping the intent
-
-                if (shouldDismiss) {
-                    finish();
-                    return;
-                }
-                handler.postDelayed(this, 60_000);
+        if (REASON_SESSION_TIMEOUT.equals(reason) || REASON_EARLY_EXIT.equals(reason)) {
+            long delayMs = cooldownEndsMs - System.currentTimeMillis();
+            if (delayMs > 0) {
+                recheck = () -> {
+                    if (!isFinishing()) {
+                        finish();
+                    }
+                };
+                handler.postDelayed(recheck, delayMs);
+            } else {
+                finish();
             }
-        };
-        handler.postDelayed(recheck, 60_000);
+        }
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        // Service sent a refreshed block intent — update the UI
+        // Service sent a refreshed block intent — update the UI and recheck timer
         String reason         = intent.getStringExtra(EXTRA_REASON);
         String sleepEnd       = intent.getStringExtra(EXTRA_SLEEP_END);
         long   cooldownEndsMs = intent.getLongExtra(EXTRA_COOLDOWN_END_MS, 0);
         int    sessionCount   = intent.getIntExtra(EXTRA_SESSION_COUNT, 0);
         setupUI(reason, sleepEnd, cooldownEndsMs, sessionCount);
+        startRecheckLoop(reason, cooldownEndsMs);
     }
 
     @Override

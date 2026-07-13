@@ -20,7 +20,11 @@ import com.harithdev.focuslock.database.FocusLockDatabase;
 import com.harithdev.focuslock.model.AppRestriction;
 import com.harithdev.focuslock.model.DailyUsage;
 import com.harithdev.focuslock.ui.block.BlockActivity;
+import com.harithdev.focuslock.util.AppUtils;
 import com.harithdev.focuslock.util.TimeUtils;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * UsageTrackingService — background polling service (foreground).
@@ -74,6 +78,7 @@ public class UsageTrackingService extends Service {
     private static final long CLOCK_TOLERANCE_MS = 5 * 60_000L;
     private static final String KEY_LAST_KNOWN_MS = "last_known_timestamp_ms";
 
+    private ExecutorService checkExecutor;
     private Handler  handler;
     private Runnable checkRunnable;
     private FocusLockDatabase db;
@@ -85,6 +90,7 @@ public class UsageTrackingService extends Service {
         db    = FocusLockDatabase.getInstance(this);
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
+        checkExecutor = Executors.newSingleThreadExecutor();
         handler = new Handler(Looper.getMainLooper());
         createNotificationChannels();
         startForeground(NOTIF_ID, buildServiceNotification());
@@ -101,6 +107,9 @@ public class UsageTrackingService extends Service {
     public void onDestroy() {
         super.onDestroy();
         handler.removeCallbacks(checkRunnable);
+        if (checkExecutor != null) {
+            checkExecutor.shutdown();
+        }
         Log.d(TAG, "❌ UsageTrackingService stopped");
     }
 
@@ -116,7 +125,9 @@ public class UsageTrackingService extends Service {
         checkRunnable = new Runnable() {
             @Override
             public void run() {
-                new Thread(() -> performCheck()).start();
+                if (checkExecutor != null && !checkExecutor.isShutdown()) {
+                    checkExecutor.submit(() -> performCheck());
+                }
                 handler.postDelayed(this, CHECK_INTERVAL_MS);
             }
         };
@@ -157,7 +168,7 @@ public class UsageTrackingService extends Service {
             return;
         }
 
-        if (isSafeApp(foreground)) return;
+        if (AppUtils.isSafeApp(this, foreground)) return;
 
         AppRestriction restriction = db.appRestrictionDao().getByPackageName(foreground);
         if (restriction == null || !restriction.isRestricted) return;
@@ -189,7 +200,7 @@ public class UsageTrackingService extends Service {
         long remainingMs = slotDurationMs - totalSessionMs;
         if (remainingMs > 0 && remainingMs <= WARN_THRESHOLD_MS) {
             if (dailyStatus != 1) { // Smart prioritization: Skip if Daily Warning is active
-                String appLabel = getAppLabel(foreground);
+                String appLabel = AppUtils.getAppLabel(this, foreground);
                 sendLimitWarning(foreground, today, appLabel,
                         "session", Math.max(1, (int)(remainingMs / 60_000)), usage.sessionsUsedToday);
             }
@@ -230,7 +241,7 @@ public class UsageTrackingService extends Service {
         long remainingMs = dailyLimitMs - totalMs;
         boolean warningActive = (remainingMs > 0 && remainingMs <= WARN_THRESHOLD_MS);
         if (warningActive) {
-            String appLabel = getAppLabel(foreground);
+            String appLabel = AppUtils.getAppLabel(this, foreground);
             sendLimitWarning(foreground, today, appLabel,
                     "daily", Math.max(1, (int)(remainingMs / 60_000)), usage.sessionsUsedToday);
         }
@@ -269,15 +280,26 @@ public class UsageTrackingService extends Service {
      */
     private void sendLimitWarning(String pkg, String today,
                                   String appLabel, String limitType, int minsLeft, int sessionsUsedToday) {
-        String warnKey = KEY_WARN_PREFIX + pkg + "_" + today + "_" + limitType;
+        String lastWarnedDateKey = KEY_WARN_PREFIX + pkg + "_" + limitType + "_date";
+        String lastWarnedSessionKey = KEY_WARN_PREFIX + pkg + "_session_index";
+
+        String lastWarnedDate = prefs.getString(lastWarnedDateKey, "");
+        int lastWarnedSession = prefs.getInt(lastWarnedSessionKey, -1);
+
+        if (today.equals(lastWarnedDate)) {
+            if (limitType.equals("daily")) {
+                return; // Already sent daily limit warning today
+            } else if (limitType.equals("session") && sessionsUsedToday == lastWarnedSession) {
+                return; // Already sent session limit warning for this session today
+            }
+        }
+
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(lastWarnedDateKey, today);
         if (limitType.equals("session")) {
-            warnKey += "_" + sessionsUsedToday; // Fix Once-Per-Day bug
+            editor.putInt(lastWarnedSessionKey, sessionsUsedToday);
         }
-        
-        if (prefs.getBoolean(warnKey, false)) {
-            return; // Already sent the warning for this app today/session
-        }
-        prefs.edit().putBoolean(warnKey, true).apply();
+        editor.apply();
 
         String title   = "⏰ " + appLabel + " — " + minsLeft + " min left";
         String message = limitType.equals("session")
@@ -297,7 +319,7 @@ public class UsageTrackingService extends Service {
                 .setContentTitle(title)
                 .setContentText(message)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
-                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setSmallIcon(com.harithdev.focuslock.R.drawable.ic_notification)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .build();
@@ -310,39 +332,20 @@ public class UsageTrackingService extends Service {
     //  Helpers
     // ══════════════════════════════════════════════════════════════
 
-    private String getAppLabel(String pkg) {
-        try {
-            return getPackageManager()
-                    .getApplicationLabel(
-                            getPackageManager().getApplicationInfo(pkg, 0))
-                    .toString();
-        } catch (Exception e) {
-            return pkg;
-        }
-    }
-
-    private boolean isSafeApp(String pkg) {
-        if (pkg == null) return true;
-        if (pkg.startsWith("com.harithdev.focuslock")) return true;
-        if (pkg.equals("android") || pkg.equals("com.android.systemui")) return true;
-        String lower = pkg.toLowerCase();
-        if (lower.contains("launcher") || lower.contains("home") || lower.contains("shell")) return true;
-        if (pkg.equals("com.miui.home") || pkg.equals("com.miui.systemui.plugin") ||
-                pkg.equals("miui.systemui.plugin") || pkg.equals("com.sec.android.app.launcher") ||
-                pkg.equals("com.android.launcher3")) return true;
-        return false;
-    }
-
     private void showBlockScreen(String packageName, String reason,
                                  String sleepEndTime, long cooldownEndsAtMs, int sessionCount) {
-        Intent intent = new Intent(this, BlockActivity.class);
-        intent.putExtra(BlockActivity.EXTRA_PACKAGE,         packageName);
-        intent.putExtra(BlockActivity.EXTRA_REASON,          reason);
-        intent.putExtra(BlockActivity.EXTRA_SLEEP_END,       sleepEndTime);
-        intent.putExtra(BlockActivity.EXTRA_COOLDOWN_END_MS, cooldownEndsAtMs);
-        intent.putExtra(BlockActivity.EXTRA_SESSION_COUNT,   sessionCount);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
+        if (FocusLockAccessibilityService.isServiceRunning && FocusLockAccessibilityService.getInstance() != null) {
+            FocusLockAccessibilityService.getInstance().showBlock(packageName, reason, sleepEndTime, cooldownEndsAtMs, sessionCount);
+        } else {
+            Intent intent = new Intent(this, BlockActivity.class);
+            intent.putExtra(BlockActivity.EXTRA_PACKAGE,         packageName);
+            intent.putExtra(BlockActivity.EXTRA_REASON,          reason);
+            intent.putExtra(BlockActivity.EXTRA_SLEEP_END,       sleepEndTime);
+            intent.putExtra(BlockActivity.EXTRA_COOLDOWN_END_MS, cooldownEndsAtMs);
+            intent.putExtra(BlockActivity.EXTRA_SESSION_COUNT,   sessionCount);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -373,7 +376,7 @@ public class UsageTrackingService extends Service {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("FocusLock is active")
                 .setContentText("Monitoring your app usage")
-                .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+                .setSmallIcon(com.harithdev.focuslock.R.drawable.ic_notification)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setOngoing(true)
                 .build();

@@ -13,11 +13,13 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 
 import com.harithdev.focuslock.database.FocusLockDatabase;
 import com.harithdev.focuslock.model.AppRestriction;
 import com.harithdev.focuslock.model.DailyUsage;
 import com.harithdev.focuslock.ui.block.BlockActivity;
+import com.harithdev.focuslock.util.AppUtils;
 import com.harithdev.focuslock.util.TimeUtils;
 
 import java.util.List;
@@ -56,6 +58,11 @@ import java.util.List;
 public class FocusLockAccessibilityService extends AccessibilityService {
 
     private static final String TAG = "FocusLock";
+    private static volatile FocusLockAccessibilityService instance = null;
+
+    public static FocusLockAccessibilityService getInstance() {
+        return instance;
+    }
 
     // ── Debounce Timeouts ──────────────────────────────────────────────────
     // For launchers (Home screens), we assume the user left the app intentionally.
@@ -66,6 +73,10 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     // the user is usually just checking a notification. We give a much larger
     // grace period. If they dismiss the shade within this time, the session resumes.
     private static final long TRANSIENT_UI_DEBOUNCE_MS = 10_000;
+
+    // For general app transitions (e.g., opening an in-app browser or comment section),
+    // we give a tiny grace period to prevent false early-exits before closing the session.
+    private static final long APP_TRANSITION_DEBOUNCE_MS = 1_500;
 
     // ── FIX 8: Clock manipulation guard ───────────────────────────────
     private static final String PREFS_NAME       = "focuslock_prefs";
@@ -183,15 +194,34 @@ public class FocusLockAccessibilityService extends AccessibilityService {
             prefs.edit().putLong(KEY_LAST_KNOWN_MS, now).apply();
         }
 
+        // ── Pre-check: is the new package restricted? ──
+        FocusLockDatabase db = FocusLockDatabase.getInstance(this);
+        AppRestriction restriction = db.appRestrictionDao().getByPackageName(newPkg);
+        boolean isRestricted = (restriction != null && restriction.isRestricted);
+
         if (activeRestrictedPkg != null && !activeRestrictedPkg.equals(newPkg)) {
-            if (isSafeApp(newPkg)) {
+            // If the restricted app is still visible on screen (e.g., keyboard is open,
+            // system dialog overlay, custom overlay drawer), ignore the exit transition.
+            if (isAppWindowVisible(activeRestrictedPkg)) {
+                Log.d(TAG, "🔍 Active restricted app " + activeRestrictedPkg + " is still visible on screen. Ignoring exit.");
+                return;
+            }
+
+            if (AppUtils.isSafeApp(this, newPkg)) {
                 // Transient system overlay (notification shade) OR Home screen.
                 // Give the restricted app a grace period to come back.
-                long debounceTime = isHomeApp(newPkg) ? HOME_DEBOUNCE_MS : TRANSIENT_UI_DEBOUNCE_MS;
+                long debounceTime = AppUtils.isHomeApp(newPkg) ? HOME_DEBOUNCE_MS : TRANSIENT_UI_DEBOUNCE_MS;
                 schedulePendingClose(activeRestrictedPkg, debounceTime);
                 return;
+            } else if (!isRestricted) {
+                // User moved to a non-restricted app (which could just be an internal 
+                // webview/component for the current app). Apply a short transition 
+                // debounce to prevent false early-exits.
+                schedulePendingClose(activeRestrictedPkg, APP_TRANSITION_DEBOUNCE_MS);
+                return;
             } else {
-                // User moved to a real non-restricted app — close immediately.
+                // User moved directly to ANOTHER restricted app.
+                // Close the old session immediately and let the new one process.
                 cancelPendingClose();
                 closeActiveSession(activeRestrictedPkg, now);
             }
@@ -203,14 +233,12 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         }
 
         // ── Step 3: Safe apps — nothing to enforce ─────────────────────────
-        if (isSafeApp(newPkg)) {
+        if (AppUtils.isSafeApp(this, newPkg)) {
             return;
         }
 
-        // ── Step 4: Look up restriction ────────────────────────────────────
-        FocusLockDatabase db = FocusLockDatabase.getInstance(this);
-        AppRestriction restriction = db.appRestrictionDao().getByPackageName(newPkg);
-        if (restriction == null || !restriction.isRestricted) {
+        // ── Step 4: Look up restriction (already queried above) ────────────
+        if (!isRestricted) {
             Log.d(TAG, "✅ Not restricted: " + newPkg);
             return;
         }
@@ -333,6 +361,13 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         pendingClosePkg = pkg;
         pendingSessionClose = () -> {
             if (pkg.equals(pendingClosePkg)) {
+                // Double-check: is the app still visible on screen?
+                if (isAppWindowVisible(pkg)) {
+                    Log.d(TAG, "⏰ Debounce timer fired, but " + pkg + " is still visible. Cancelling session close.");
+                    pendingSessionClose = null;
+                    pendingClosePkg     = null;
+                    return;
+                }
                 Log.d(TAG, "⏰ Debounce fired — closing session for " + pkg);
                 new Thread(() -> closeActiveSession(pkg, System.currentTimeMillis())).start();
             }
@@ -407,43 +442,32 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         }
     }
 
-    private boolean isSafeApp(String pkg) {
-        if (pkg == null) return true;
-        if (pkg.startsWith("com.harithdev.focuslock")) return true;
-        if (pkg.equals("android") || pkg.equals("com.android.systemui")) return true;
-        String lower = pkg.toLowerCase();
-        if (lower.contains("launcher")) return true;
-        if (lower.contains("home"))     return true;
-        if (lower.contains("shell"))    return true;
-        // MIUI-specific system packages
-        if (pkg.equals("com.miui.home"))                       return true;
-        if (pkg.equals("com.miui.systemui.plugin"))            return true;
-        if (pkg.equals("miui.systemui.plugin"))                return true;
-        if (pkg.equals("com.miui.securitycenter"))             return true;
-        if (pkg.equals("com.miui.system"))                     return true;
-        if (pkg.equals("com.miui.packageinstaller"))           return true;
-        if (pkg.equals("com.miui.screenshot"))                 return true;
-        if (pkg.equals("com.miui.contentextension"))           return true;
-        // Common Android launchers
-        if (pkg.equals("com.sec.android.app.launcher"))        return true;
-        if (pkg.equals("com.android.launcher3"))               return true;
-        if (pkg.equals("com.google.android.apps.nexuslauncher")) return true;
-        return false;
-    }
-
     /**
-     * Differentiates launcher/home apps from transient system UI (like notification shade).
+     * Checks if a window belonging to the specified package name is currently visible on screen.
      */
-    private boolean isHomeApp(String pkg) {
-        if (pkg == null) return false;
-        String lower = pkg.toLowerCase();
-        if (lower.contains("launcher") || lower.contains("home")) return true;
-        if (pkg.equals("com.miui.home") || pkg.equals("com.sec.android.app.launcher")
-                || pkg.equals("com.android.launcher3")) return true;
+    private boolean isAppWindowVisible(String pkgName) {
+        if (pkgName == null) return false;
+        List<AccessibilityWindowInfo> windows = getWindows();
+        if (windows == null || windows.isEmpty()) {
+            return false;
+        }
+        for (AccessibilityWindowInfo window : windows) {
+            AccessibilityNodeInfo root = window.getRoot();
+            if (root != null) {
+                try {
+                    CharSequence windowPkg = root.getPackageName();
+                    if (windowPkg != null && pkgName.equals(windowPkg.toString())) {
+                        return true;
+                    }
+                } finally {
+                    root.recycle();
+                }
+            }
+        }
         return false;
     }
 
-    private void showBlock(String pkg, String reason,
+    public void showBlock(String pkg, String reason,
                            String sleepEnd, long cooldownEndsMs, int sessionCount) {
         Intent intent = new Intent(this, BlockActivity.class);
         intent.putExtra(BlockActivity.EXTRA_PACKAGE,         pkg);
@@ -461,6 +485,7 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
     @Override
     protected void onServiceConnected() {
+        instance = this;
         isServiceRunning = true;
         // Configure which events we want
         AccessibilityServiceInfo info = new AccessibilityServiceInfo();
@@ -521,6 +546,7 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     @Override
     public void onInterrupt() {
         isServiceRunning = false;
+        instance = null;
         currentForegroundApp = null;
         cancelPendingClose();
         if (activeRestrictedPkg != null) {
@@ -532,6 +558,7 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     public void onDestroy() {
         super.onDestroy();
         isServiceRunning = false;
+        instance = null;
         currentForegroundApp = null;
         cancelPendingClose();
         // FIX 2: Unregister screen receiver to avoid leaks
