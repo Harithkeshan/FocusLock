@@ -97,10 +97,10 @@ public class FocusLockAccessibilityService extends AccessibilityService {
      *  screen-on interval. Used to correctly pause/resume across lock events. */
     private volatile long   sessionAccumulatedMs = 0;
 
-    // ── Debounced session-close ────────────────────────────────────────
+    // ── Debounced session-pause ────────────────────────────────────────
     private final Handler  sessionCloseHandler = new Handler(Looper.getMainLooper());
-    private       Runnable pendingSessionClose = null;
-    private       String   pendingClosePkg     = null;
+    private       Runnable pendingSessionPause = null;
+    private       String   pendingPausePkg     = null;
 
     // ── FIX 2: Screen-off receiver ────────────────────────────────────
     private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
@@ -211,25 +211,30 @@ public class FocusLockAccessibilityService extends AccessibilityService {
                 // Transient system overlay (notification shade) OR Home screen.
                 // Give the restricted app a grace period to come back.
                 long debounceTime = AppUtils.isHomeApp(newPkg) ? HOME_DEBOUNCE_MS : TRANSIENT_UI_DEBOUNCE_MS;
-                schedulePendingClose(activeRestrictedPkg, debounceTime);
+                schedulePendingPause(activeRestrictedPkg, debounceTime);
                 return;
             } else if (!isRestricted) {
                 // User moved to a non-restricted app (which could just be an internal 
                 // webview/component for the current app). Apply a short transition 
                 // debounce to prevent false early-exits.
-                schedulePendingClose(activeRestrictedPkg, APP_TRANSITION_DEBOUNCE_MS);
+                schedulePendingPause(activeRestrictedPkg, APP_TRANSITION_DEBOUNCE_MS);
                 return;
             } else {
                 // User moved directly to ANOTHER restricted app.
                 // Close the old session immediately and let the new one process.
-                cancelPendingClose();
-                closeActiveSession(activeRestrictedPkg, now);
+                cancelPendingPause();
+                AppRestriction oldRestriction = db.appRestrictionDao().getByPackageName(activeRestrictedPkg);
+                if (oldRestriction != null && oldRestriction.splitSessions) {
+                    pauseActiveSession(activeRestrictedPkg, now);
+                } else {
+                    closeActiveSession(activeRestrictedPkg, now);
+                }
             }
         }
 
         // ── Step 2: If the restricted app returned, cancel pending close ───
         if (activeRestrictedPkg != null && activeRestrictedPkg.equals(newPkg)) {
-            cancelPendingClose();
+            cancelPendingPause();
         }
 
         // ── Step 3: Safe apps — nothing to enforce ─────────────────────────
@@ -243,8 +248,19 @@ public class FocusLockAccessibilityService extends AccessibilityService {
             return;
         }
 
-        // ── Step 5: Enforce block conditions ───────────────────────────────
+        // ── Feature B: Sync enforced values on new day ────────────────────
         String today = TimeUtils.todayString();
+        if (restriction.lastEnforcedSyncDate == null 
+                || !restriction.lastEnforcedSyncDate.equals(today)) {
+            restriction.enforcedDailyLimitMinutes = restriction.dailyLimitMinutes;
+            restriction.enforcedSessionCount      = restriction.sessionCount;
+            restriction.enforcedCooldownMinutes   = restriction.cooldownMinutes;
+            restriction.lastEnforcedSyncDate      = today;
+            db.appRestrictionDao().update(restriction);
+            Log.d(TAG, "🔄 Synced enforced values for " + newPkg + " (new day)");
+        }
+
+        // ── Step 5: Enforce block conditions ───────────────────────────────
         DailyUsage usage = getOrCreateUsage(db, newPkg, today);
 
         // 5a. Sleep mode
@@ -286,19 +302,41 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
         // ── Step 6: Allow — start/resume session ───────────────────────────
         if (!newPkg.equals(activeRestrictedPkg)) {
-            Log.d(TAG, "▶️ Session started for " + newPkg);
+            // Check for a PAUSED session to resume
+            if (restriction.splitSessions
+                    && usage.inActiveSession
+                    && usage.sessionStartTimeMs == 0) {
+                // RESUME paused session
+                Log.d(TAG, "▶️ Resuming paused session for " + newPkg
+                        + " (accumulated: " + usage.currentSessionUsedMs / 1000 + "s)");
+                usage.sessionStartTimeMs = now;
+                db.dailyUsageDao().update(usage);
+        
+                activeRestrictedPkg  = newPkg;
+                sessionStartMs       = now;
+                sessionAccumulatedMs = 0; // accumulated is already in currentSessionUsedMs
+            } else {
+                // If split sessions was turned off, clear stale pause state
+                if (!restriction.splitSessions && usage.inActiveSession && usage.sessionStartTimeMs == 0) {
+                    usage.inActiveSession = false;
+                    db.dailyUsageDao().update(usage);
+                    Log.d(TAG, "🧹 Cleared stale paused session (split sessions disabled)");
+                }
 
-            if (restriction.splitSessions) {
-                usage.sessionsUsedToday += 1;
+                // START new session
+                Log.d(TAG, "▶️ Session started for " + newPkg);
+                if (restriction.splitSessions) {
+                    usage.sessionsUsedToday += 1;
+                }
+                usage.inActiveSession      = true;
+                usage.sessionStartTimeMs   = now;
+                usage.currentSessionUsedMs = 0;
+                db.dailyUsageDao().update(usage);
+        
+                activeRestrictedPkg  = newPkg;
+                sessionStartMs       = now;
+                sessionAccumulatedMs = 0;
             }
-            usage.inActiveSession      = true;
-            usage.sessionStartTimeMs   = now;
-            usage.currentSessionUsedMs = 0;
-            db.dailyUsageDao().update(usage);
-
-            activeRestrictedPkg  = newPkg;
-            sessionStartMs       = now;
-            sessionAccumulatedMs = 0;
         }
 
         Log.d(TAG, "✅ " + newPkg + " allowed — session active");
@@ -307,6 +345,39 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     // ══════════════════════════════════════════════════════════════════════
     //  Session close — Behaviour 2 (early exit cooldown)
     // ══════════════════════════════════════════════════════════════════════
+
+    private void pauseActiveSession(String pkg, long now) {
+        Log.d(TAG, "⏸️ Pausing session for " + pkg);
+
+        FocusLockDatabase db = FocusLockDatabase.getInstance(this);
+        String today = TimeUtils.todayString();
+        DailyUsage usage = db.dailyUsageDao().getUsage(pkg, today);
+
+        if (usage == null || !usage.inActiveSession) {
+            // Session already closed (e.g., by timeout) — just clear in-memory state
+            activeRestrictedPkg  = null;
+            sessionStartMs       = 0;
+            sessionAccumulatedMs = 0;
+            return;
+        }
+
+        // Calculate pause-aware elapsed time
+        long liveMs    = (sessionStartMs > 0) ? (now - sessionStartMs) : 0;
+        long sessionMs = sessionAccumulatedMs + liveMs;
+        if (sessionMs < 0) sessionMs = 0;
+
+        // Save elapsed time to DB
+        usage.totalUsedMs          += sessionMs;
+        usage.currentSessionUsedMs += sessionMs;
+        usage.sessionStartTimeMs    = 0;  // 0 = PAUSED (inActiveSession stays true)
+
+        db.dailyUsageDao().update(usage);
+
+        // Clear in-memory state
+        activeRestrictedPkg  = null;
+        sessionStartMs       = 0;
+        sessionAccumulatedMs = 0;
+    }
 
     private void closeActiveSession(String pkg, long now) {
         Log.d(TAG, "💾 Closing session for " + pkg);
@@ -337,14 +408,8 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         usage.inActiveSession       = false;
         usage.sessionStartTimeMs    = 0;
 
-        // Behaviour 2: early exit in split mode → start cooldown immediately
-        AppRestriction restriction = db.appRestrictionDao().getByPackageName(pkg);
-        if (restriction != null && restriction.splitSessions) {
-            usage.inCooldown          = true;
-            usage.cooldownEndsAtMs    = now + (restriction.cooldownMinutes * 60_000L);
-            usage.isEarlyExitCooldown = true;
-            Log.d(TAG, "🧘 Early exit — cooldown until " + usage.cooldownEndsAtMs);
-        }
+        // With Pause-Resume, early exit in split mode is handled by pauseActiveSession().
+        // closeActiveSession() is only reached for non-split mode exits.
 
         db.dailyUsageDao().update(usage);
         activeRestrictedPkg  = null;
@@ -353,37 +418,45 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    //  Debounced session-close helpers (MIUI overlay false-exit fix)
+    //  Debounced session-pause helpers (MIUI overlay false-exit fix)
     // ══════════════════════════════════════════════════════════════════════
 
-    private synchronized void schedulePendingClose(final String pkg, long delayMs) {
-        cancelPendingClose();
-        pendingClosePkg = pkg;
-        pendingSessionClose = () -> {
-            if (pkg.equals(pendingClosePkg)) {
+    private synchronized void schedulePendingPause(final String pkg, long delayMs) {
+        cancelPendingPause();
+        pendingPausePkg = pkg;
+        pendingSessionPause = () -> {
+            if (pkg.equals(pendingPausePkg)) {
                 // Double-check: is the app still visible on screen?
                 if (isAppWindowVisible(pkg)) {
-                    Log.d(TAG, "⏰ Debounce timer fired, but " + pkg + " is still visible. Cancelling session close.");
-                    pendingSessionClose = null;
-                    pendingClosePkg     = null;
+                    Log.d(TAG, "⏰ Debounce timer fired, but " + pkg + " is still visible. Cancelling session pause.");
+                    pendingSessionPause = null;
+                    pendingPausePkg     = null;
                     return;
                 }
-                Log.d(TAG, "⏰ Debounce fired — closing session for " + pkg);
-                new Thread(() -> closeActiveSession(pkg, System.currentTimeMillis())).start();
+                Log.d(TAG, "⏰ Debounce fired — pausing/closing session for " + pkg);
+                new Thread(() -> {
+                    FocusLockDatabase db = FocusLockDatabase.getInstance(this);
+                    AppRestriction r = db.appRestrictionDao().getByPackageName(pkg);
+                    if (r != null && r.splitSessions) {
+                        pauseActiveSession(pkg, System.currentTimeMillis());
+                    } else {
+                        closeActiveSession(pkg, System.currentTimeMillis());
+                    }
+                }).start();
             }
-            pendingSessionClose = null;
-            pendingClosePkg     = null;
+            pendingSessionPause = null;
+            pendingPausePkg     = null;
         };
-        sessionCloseHandler.postDelayed(pendingSessionClose, delayMs);
+        sessionCloseHandler.postDelayed(pendingSessionPause, delayMs);
         Log.d(TAG, "⏱️ Debounce started for " + pkg + " (" + delayMs + "ms)");
     }
 
-    private synchronized void cancelPendingClose() {
-        if (pendingSessionClose != null) {
-            sessionCloseHandler.removeCallbacks(pendingSessionClose);
-            pendingSessionClose = null;
-            pendingClosePkg     = null;
-            Log.d(TAG, "❌ Pending close cancelled (app returned within grace period)");
+    private synchronized void cancelPendingPause() {
+        if (pendingSessionPause != null) {
+            sessionCloseHandler.removeCallbacks(pendingSessionPause);
+            pendingSessionPause = null;
+            pendingPausePkg     = null;
+            Log.d(TAG, "❌ Pending pause cancelled (app returned within grace period)");
         }
     }
 
@@ -422,10 +495,10 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     }
 
     private void showLimitBlock(String pkg, AppRestriction restriction, DailyUsage usage) {
-        boolean dailyLimitHit = usage.totalUsedMs >= (restriction.dailyLimitMinutes * 60_000L);
-        if (restriction.splitSessions && usage.sessionsUsedToday >= restriction.sessionCount && !usage.inActiveSession && !dailyLimitHit) {
-            Log.d(TAG, "🏁 BLOCK — all sessions done (" + restriction.sessionCount + ")");
-            showBlock(pkg, BlockActivity.REASON_ALL_SESSIONS, null, 0, restriction.sessionCount);
+        boolean dailyLimitHit = usage.totalUsedMs >= (restriction.enforcedDailyLimitMinutes * 60_000L);
+        if (restriction.splitSessions && usage.sessionsUsedToday >= restriction.enforcedSessionCount && !usage.inActiveSession && !dailyLimitHit) {
+            Log.d(TAG, "🏁 BLOCK — all sessions done (" + restriction.enforcedSessionCount + ")");
+            showBlock(pkg, BlockActivity.REASON_ALL_SESSIONS, null, 0, restriction.enforcedSessionCount);
         } else {
             Log.d(TAG, "🔒 BLOCK — daily limit reached");
             showBlock(pkg, BlockActivity.REASON_LIMIT, null, 0, 0);
@@ -433,9 +506,9 @@ public class FocusLockAccessibilityService extends AccessibilityService {
     }
 
     private boolean isDailyLimitReached(AppRestriction restriction, DailyUsage usage) {
-        boolean dailyLimitHit = usage.totalUsedMs >= (restriction.dailyLimitMinutes * 60_000L);
+        boolean dailyLimitHit = usage.totalUsedMs >= (restriction.enforcedDailyLimitMinutes * 60_000L);
         if (restriction.splitSessions) {
-            boolean allSessionsHit = usage.sessionsUsedToday >= restriction.sessionCount && !usage.inActiveSession;
+            boolean allSessionsHit = usage.sessionsUsedToday >= restriction.enforcedSessionCount && !usage.inActiveSession;
             return dailyLimitHit || allSessionsHit;
         } else {
             return dailyLimitHit;
@@ -529,13 +602,15 @@ public class FocusLockAccessibilityService extends AccessibilityService {
             if (!stale.isEmpty()) {
                 Log.d(TAG, "🧹 Cleaning up " + stale.size() + " stale session(s) from previous process");
                 for (DailyUsage s : stale) {
-                    s.inActiveSession    = false;
-                    s.sessionStartTimeMs = 0;
-                    // Do NOT change totalUsedMs or sessionsUsedToday — those
-                    // were already recorded when the session started. We just
-                    // mark the session as closed so the next open starts fresh.
+                    if (s.sessionStartTimeMs > 0) {
+                        // Was ACTIVE when service died → move to PAUSED
+                        s.sessionStartTimeMs = 0;  // PAUSED (inActiveSession stays true)
+                        Log.d(TAG, "   ↳ Moved active→paused for " + s.packageName);
+                    } else {
+                        // Was already PAUSED → leave it alone
+                        Log.d(TAG, "   ↳ Already paused, skipping " + s.packageName);
+                    }
                     db.dailyUsageDao().update(s);
-                    Log.d(TAG, "   ↳ Closed stale session for " + s.packageName);
                 }
             }
         } catch (Exception e) {
@@ -548,9 +623,18 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         isServiceRunning = false;
         instance = null;
         currentForegroundApp = null;
-        cancelPendingClose();
+        cancelPendingPause();
         if (activeRestrictedPkg != null) {
-            closeActiveSession(activeRestrictedPkg, System.currentTimeMillis());
+            final String pkgToClose = activeRestrictedPkg;
+            new Thread(() -> {
+                FocusLockDatabase db = FocusLockDatabase.getInstance(this);
+                AppRestriction oldRestriction = db.appRestrictionDao().getByPackageName(pkgToClose);
+                if (oldRestriction != null && oldRestriction.splitSessions) {
+                    pauseActiveSession(pkgToClose, System.currentTimeMillis());
+                } else {
+                    closeActiveSession(pkgToClose, System.currentTimeMillis());
+                }
+            }).start();
         }
     }
 
@@ -560,7 +644,7 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         isServiceRunning = false;
         instance = null;
         currentForegroundApp = null;
-        cancelPendingClose();
+        cancelPendingPause();
         // FIX 2: Unregister screen receiver to avoid leaks
         try {
             unregisterReceiver(screenReceiver);

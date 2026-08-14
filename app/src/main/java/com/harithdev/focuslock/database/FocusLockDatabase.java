@@ -28,7 +28,7 @@ import com.harithdev.focuslock.model.DailyUsage;
  */
 @Database(
         entities  = {AppRestriction.class, DailyUsage.class},
-        version   = 3,          // ← bumped from 2 to 3
+        version   = 4,          // ← bumped from 3 to 4
         exportSchema = false
 )
 public abstract class FocusLockDatabase extends RoomDatabase {
@@ -62,6 +62,24 @@ public abstract class FocusLockDatabase extends RoomDatabase {
         }
     };
 
+    // ── Migration v3 → v4 ─────────────────────────────────────
+    static final Migration MIGRATION_3_4 = new Migration(3, 4) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            // Add enforced value columns
+            db.execSQL("ALTER TABLE app_restrictions ADD COLUMN enforcedDailyLimitMinutes INTEGER NOT NULL DEFAULT 60");
+            db.execSQL("ALTER TABLE app_restrictions ADD COLUMN enforcedSessionCount INTEGER NOT NULL DEFAULT 4");
+            db.execSQL("ALTER TABLE app_restrictions ADD COLUMN enforcedCooldownMinutes INTEGER NOT NULL DEFAULT 40");
+            db.execSQL("ALTER TABLE app_restrictions ADD COLUMN lastEnforcedSyncDate TEXT");
+            
+            // Sync enforced = desired for ALL existing restrictions
+            db.execSQL("UPDATE app_restrictions SET "
+                + "enforcedDailyLimitMinutes = dailyLimitMinutes, "
+                + "enforcedSessionCount = sessionCount, "
+                + "enforcedCooldownMinutes = cooldownMinutes");
+        }
+    };
+
     // ── Singleton ─────────────────────────────────────────────
     private static volatile FocusLockDatabase INSTANCE;
 
@@ -74,7 +92,7 @@ public abstract class FocusLockDatabase extends RoomDatabase {
                                     FocusLockDatabase.class,
                                     "focuslock_db"
                             )
-                            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                             .build();
                 }
             }

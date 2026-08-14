@@ -191,7 +191,7 @@ public class UsageTrackingService extends Service {
 
         long liveElapsedMs  = (usage.sessionStartTimeMs > 0) ? (now - usage.sessionStartTimeMs) : 0;
         long totalSessionMs = usage.currentSessionUsedMs + liveElapsedMs;
-        long slotDurationMs = restriction.getSlotDurationMinutes() * 60_000L;
+        long slotDurationMs = restriction.getEnforcedSlotDurationMinutes() * 60_000L;
 
         Log.d(TAG, "⏱️ [" + foreground + "] session: "
                 + totalSessionMs / 1000 + "s / " + slotDurationMs / 1000 + "s");
@@ -214,7 +214,7 @@ public class UsageTrackingService extends Service {
             usage.inActiveSession      = false;
             usage.sessionStartTimeMs   = 0;
             usage.inCooldown           = true;
-            usage.cooldownEndsAtMs     = now + (restriction.cooldownMinutes * 60_000L);
+            usage.cooldownEndsAtMs     = now + (restriction.enforcedCooldownMinutes * 60_000L);
             usage.isEarlyExitCooldown  = false;
             db.dailyUsageDao().update(usage);
 
@@ -235,7 +235,7 @@ public class UsageTrackingService extends Service {
 
         long liveElapsedMs = (usage.sessionStartTimeMs > 0) ? (now - usage.sessionStartTimeMs) : 0;
         long totalMs       = usage.totalUsedMs + liveElapsedMs;
-        long dailyLimitMs  = restriction.dailyLimitMinutes * 60_000L;
+        long dailyLimitMs  = restriction.enforcedDailyLimitMinutes * 60_000L;
 
         // FIX 6: Send warning when 5 minutes remain in the daily limit
         long remainingMs = dailyLimitMs - totalMs;

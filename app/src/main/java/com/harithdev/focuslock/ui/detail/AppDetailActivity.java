@@ -344,7 +344,7 @@ public class AppDetailActivity extends AppCompatActivity {
 
         binding.txtSlotPreview.setText(
                 String.format(Locale.getDefault(),
-                        "%d sessions × %s each\nCooldown: %s · Closing early still uses full slot",
+                        "%d sessions × %s each\nCooldown: %s · Leaving pauses your session",
                         selectedSlots, slotStr, coolStr)
         );
     }
@@ -387,6 +387,44 @@ public class AppDetailActivity extends AppCompatActivity {
         restriction.sessionCount   = selectedSlots;
         restriction.cooldownMinutes = cooldownMinutes;
 
+        // ── Feature B: Direction-based enforcement ──────────────────
+        boolean anyDelayed = false;
+
+        // Daily limit: smaller = more restrictive
+        int newLimit = restriction.dailyLimitMinutes;
+        if (newLimit <= restriction.enforcedDailyLimitMinutes) {
+            restriction.enforcedDailyLimitMinutes = newLimit;  // immediate
+        } else {
+            anyDelayed = true;  // keep current enforced (delayed)
+        }
+
+        // Session count: larger = more restrictive (smaller slots)
+        int newCount = restriction.sessionCount;
+        if (newCount >= restriction.enforcedSessionCount) {
+            restriction.enforcedSessionCount = newCount;  // immediate
+        } else {
+            anyDelayed = true;
+        }
+
+        // Cooldown: larger = more restrictive
+        int newCooldown = restriction.cooldownMinutes;
+        if (newCooldown >= restriction.enforcedCooldownMinutes) {
+            restriction.enforcedCooldownMinutes = newCooldown;  // immediate
+        } else {
+            anyDelayed = true;
+        }
+
+        // On first save (no enforced values yet), sync everything
+        if (restriction.lastEnforcedSyncDate == null) {
+            restriction.enforcedDailyLimitMinutes = restriction.dailyLimitMinutes;
+            restriction.enforcedSessionCount      = restriction.sessionCount;
+            restriction.enforcedCooldownMinutes   = restriction.cooldownMinutes;
+            restriction.lastEnforcedSyncDate      = TimeUtils.todayString();
+            anyDelayed = false;
+        }
+
+        final boolean finalAnyDelayed = anyDelayed;
+
         // Save to DB on background thread
         new Thread(() -> {
             // MUST insert parent (restriction) first to satisfy SQLite Foreign Key constraints
@@ -426,7 +464,10 @@ public class AppDetailActivity extends AppCompatActivity {
                 db.dailyUsageDao().update(usage);
             }
             runOnUiThread(() -> {
-                android.widget.Toast.makeText(this, "Settings saved ✓", android.widget.Toast.LENGTH_SHORT).show();
+                String msg = finalAnyDelayed
+                    ? "Settings saved ✓ — Relaxed changes take effect tomorrow"
+                    : "Settings saved ✓";
+                android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show();
                 finish();
             });
         }).start();

@@ -59,6 +59,19 @@ public class AppRestriction {
     // Min: 40, Max: 300 (5 hours)
     public int cooldownMinutes;
 
+    // ── Enforced values (Feature B) ──────────────────────────
+    // These hold the ACTUALLY ENFORCED limits for today.
+    // The regular fields (dailyLimitMinutes, sessionCount, cooldownMinutes)
+    // store what the user WANTS. These store what's ACTIVE.
+    //
+    // Less-restrictive changes → enforced stays old (delayed to next day)
+    // More-restrictive changes → enforced updates immediately
+
+    public int enforcedDailyLimitMinutes;
+    public int enforcedSessionCount;
+    public int enforcedCooldownMinutes;
+    public String lastEnforcedSyncDate;
+
     // ── Constructor ───────────────────────────────────────────
     public AppRestriction(@NonNull String packageName, String appName) {
         this.packageName      = packageName;
@@ -71,6 +84,11 @@ public class AppRestriction {
         this.splitSessions    = false;
         this.sessionCount     = 4;
         this.cooldownMinutes  = 40;
+        
+        this.enforcedDailyLimitMinutes = 60;
+        this.enforcedSessionCount      = 4;
+        this.enforcedCooldownMinutes   = 40;
+        this.lastEnforcedSyncDate      = null;
     }
 
     // ── Helper: minutes per slot ──────────────────────────────
@@ -79,5 +97,11 @@ public class AppRestriction {
     public int getSlotDurationMinutes() {
         if (!splitSessions || sessionCount <= 0) return dailyLimitMinutes;
         return dailyLimitMinutes / sessionCount;
+    }
+
+    /** Slot duration using ENFORCED values (for enforcement code) */
+    public int getEnforcedSlotDurationMinutes() {
+        if (!splitSessions || enforcedSessionCount <= 0) return enforcedDailyLimitMinutes;
+        return enforcedDailyLimitMinutes / enforcedSessionCount;
     }
 }
