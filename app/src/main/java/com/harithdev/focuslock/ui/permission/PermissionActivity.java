@@ -47,42 +47,51 @@ public class PermissionActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         refreshUI();
-
-        // If both permissions are now granted → proceed
-        if (hasUsageAccess() && hasOverlayPermission() && hasAccessibilityPermission()) {
-            proceedToApp();
-        }
     }
 
     // ── Update button states ──────────────────────────────────
 
     private void refreshUI() {
-        boolean usageOk   = hasUsageAccess();
-        boolean overlayOk = hasOverlayPermission();
+        boolean usageOk         = hasUsageAccess();
+        boolean overlayOk       = hasOverlayPermission();
+        boolean accessibilityOk = hasAccessibilityPermission();
+        boolean notificationOk  = hasNotificationPermission();
+
+        int grantedColor = androidx.core.content.ContextCompat.getColor(this, com.harithdev.focuslock.R.color.status_granted);
+        int deniedColor  = androidx.core.content.ContextCompat.getColor(this, com.harithdev.focuslock.R.color.status_denied);
 
         // Usage Access row
         binding.txtUsageStatus.setText(usageOk ? "✓  Granted" : "Not granted");
-        binding.txtUsageStatus.setTextColor(usageOk ? 0xFF4ADE80 : 0xFFF87171);
+        binding.txtUsageStatus.setTextColor(usageOk ? grantedColor : deniedColor);
         binding.txtUsageStatus.setBackgroundResource(usageOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
         binding.btnGrantUsage.setAlpha(usageOk ? 0.4f : 1.0f);
         binding.btnGrantUsage.setEnabled(!usageOk);
 
         // Overlay row
         binding.txtOverlayStatus.setText(overlayOk ? "✓  Granted" : "Not granted");
-        binding.txtOverlayStatus.setTextColor(overlayOk ? 0xFF4ADE80 : 0xFFF87171);
+        binding.txtOverlayStatus.setTextColor(overlayOk ? grantedColor : deniedColor);
         binding.txtOverlayStatus.setBackgroundResource(overlayOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
         binding.btnGrantOverlay.setAlpha(overlayOk ? 0.4f : 1.0f);
         binding.btnGrantOverlay.setEnabled(!overlayOk);
 
-        // Continue button — only enabled when both are granted
-        boolean accessibilityOk = hasAccessibilityPermission();
+        // Accessibility row
         binding.txtAccessibilityStatus.setText(accessibilityOk ? "✓  Granted" : "Not granted");
-        binding.txtAccessibilityStatus.setTextColor(accessibilityOk ? 0xFF4ADE80 : 0xFFF87171);
+        binding.txtAccessibilityStatus.setTextColor(accessibilityOk ? grantedColor : deniedColor);
         binding.txtAccessibilityStatus.setBackgroundResource(accessibilityOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
         binding.btnGrantAccessibility.setAlpha(accessibilityOk ? 0.4f : 1.0f);
         binding.btnGrantAccessibility.setEnabled(!accessibilityOk);
-        binding.btnContinue.setAlpha((usageOk && overlayOk && accessibilityOk) ? 1.0f : 0.4f);
-        binding.btnContinue.setEnabled(usageOk && overlayOk && accessibilityOk);
+
+        // Notification row
+        binding.txtNotificationStatus.setText(notificationOk ? "✓  Granted" : "Not granted");
+        binding.txtNotificationStatus.setTextColor(notificationOk ? grantedColor : deniedColor);
+        binding.txtNotificationStatus.setBackgroundResource(notificationOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
+        binding.btnGrantNotification.setAlpha(notificationOk ? 0.4f : 1.0f);
+        binding.btnGrantNotification.setEnabled(!notificationOk);
+
+        // Continue button — only enabled when required 4 are granted
+        boolean allOk = usageOk && overlayOk && accessibilityOk && notificationOk;
+        binding.btnContinue.setAlpha(allOk ? 1.0f : 0.4f);
+        binding.btnContinue.setEnabled(allOk);
     }
 
     // ── Button listeners ──────────────────────────────────────
@@ -106,18 +115,35 @@ public class PermissionActivity extends AppCompatActivity {
             }
         });
 
-        // Continue → start service + go to app list
-        binding.btnContinue.setOnClickListener(v -> proceedToApp());
-
         binding.btnGrantAccessibility.setOnClickListener(v -> {
             Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
             startActivity(intent);
         });
+
+        binding.btnGrantNotification.setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1001);
+            }
+        });
+
+        // Continue → start service + go to app list
+        binding.btnContinue.setOnClickListener(v -> proceedToApp());
     }
 
     // ── Proceed ───────────────────────────────────────────────
 
+    private static final int REQUEST_PIN_SETUP = 2001;
+
     private void proceedToApp() {
+        if (!com.harithdev.focuslock.security.PinManager.isPinSet(this)) {
+            Intent pinIntent = new Intent(this, com.harithdev.focuslock.ui.pin.PinActivity.class);
+            pinIntent.putExtra(com.harithdev.focuslock.ui.pin.PinActivity.EXTRA_MODE, com.harithdev.focuslock.ui.pin.PinActivity.MODE_SETUP);
+            startActivityForResult(pinIntent, REQUEST_PIN_SETUP);
+            return;
+        }
+
+        com.harithdev.focuslock.security.PinManager.setSessionAuthenticated(true);
+
         // Start the tracking service
         Intent serviceIntent = new Intent(this, UsageTrackingService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -131,6 +157,14 @@ public class PermissionActivity extends AppCompatActivity {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_PIN_SETUP && resultCode == RESULT_OK) {
+            proceedToApp();
+        }
     }
 
     // ── Permission checks ─────────────────────────────────────
@@ -165,7 +199,7 @@ public class PermissionActivity extends AppCompatActivity {
         return true; // Granted by default on older Android versions
     }
 
-    private boolean hasAccessibilityPermission() {
+    public boolean hasAccessibilityPermission() {
         try {
             String services = android.provider.Settings.Secure.getString(
                     getContentResolver(),
@@ -190,5 +224,22 @@ public class PermissionActivity extends AppCompatActivity {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public boolean hasNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                    == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        }
+        return true;
+    }
+
+    public boolean hasDeviceAdminPermission() {
+        android.app.admin.DevicePolicyManager dpm =
+                (android.app.admin.DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+        if (dpm == null) return false;
+        android.content.ComponentName admin =
+                new android.content.ComponentName(this, com.harithdev.focuslock.receiver.FocusLockDeviceAdminReceiver.class);
+        return dpm.isAdminActive(admin);
     }
 }

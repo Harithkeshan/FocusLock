@@ -115,6 +115,7 @@ public class UsageCalculator {
             return totalScreenTimeMs;
 
         } catch (Exception e) {
+            timber.log.Timber.e(e, "Failed to compute screen time for %s", packageName);
             return 0;
         }
     }

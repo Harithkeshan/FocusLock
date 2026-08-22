@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0a0a0f"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Indicator Dots -->
+    <LinearLayout
+        android:id="@+id/layout_dots"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:layout_marginBottom="32dp">
+
+        <View
+            android:id="@+id/dot_slide_1"
+            android:layout_width="24dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_slot_active" />
+
+        <View
+            android:id="@+id/dot_slide_2"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_slot_inactive" />
+
+        <View
+            android:id="@+id/dot_slide_3"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:background="@drawable/bg_slot_inactive" />
+
+    </LinearLayout>
+
+    <!-- Bottom Buttons Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/btn_skip"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="Skip"
+            android:textSize="15sp"
+            android:textColor="#a1a1aa"
+            android:gravity="center"
+            android:paddingHorizontal="16dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/btn_next"
+            android:layout_width="wrap_content"
+            android:layout_height="52dp"
+            android:text="Next →"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:gravity="center"
+            android:paddingHorizontal="24dp"
+            android:background="@drawable/bg_button_primary"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
+
+</LinearLayout>

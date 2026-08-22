@@ -55,7 +55,6 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
 
         holder.appIcon.setImageDrawable(app.icon);
         holder.appName.setText(app.appName);
-        holder.packageName.setText(app.packageName);
 
         // Show "RESTRICTED" badge only if restriction is active
         holder.restrictedBadge.setVisibility(
@@ -83,14 +82,12 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView appIcon;
         TextView  appName;
-        TextView  packageName;
         TextView  restrictedBadge;
 
         ViewHolder(View itemView) {
             super(itemView);
             appIcon         = itemView.findViewById(R.id.img_app_icon);
             appName         = itemView.findViewById(R.id.txt_app_name);
-            packageName     = itemView.findViewById(R.id.txt_package_name);
             restrictedBadge = itemView.findViewById(R.id.txt_restricted_badge);
         }
     }

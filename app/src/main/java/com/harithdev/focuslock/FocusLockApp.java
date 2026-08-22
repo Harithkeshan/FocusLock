@@ -9,12 +9,9 @@ import androidx.work.WorkManager;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
-import com.harithdev.focuslock.database.FocusLockDatabase;
+import com.harithdev.focuslock.worker.MidnightResetWorker;
 
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -34,6 +31,56 @@ public class FocusLockApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        // ── Initialize Timber for structured diagnostics ──────────
+        timber.log.Timber.plant(new timber.log.Timber.DebugTree());
+        timber.log.Timber.d("🚀 FocusLock Application initialized");
+
+        Thread.UncaughtExceptionHandler defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            timber.log.Timber.e(throwable, "💥 FATAL CRASH on thread %s: %s", thread.getName(), throwable.getMessage());
+            if (defaultHandler != null) {
+                defaultHandler.uncaughtException(thread, throwable);
+            }
+        });
+
+        // ── App Lifecycle Tracker for PIN Session ───────────────────
+        registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
+            private int activityReferences = 0;
+            private boolean isActivityChangingConfigurations = false;
+
+            @Override
+            public void onActivityCreated(@androidx.annotation.NonNull android.app.Activity activity, android.os.Bundle savedInstanceState) {}
+
+            @Override
+            public void onActivityStarted(@androidx.annotation.NonNull android.app.Activity activity) {
+                if (++activityReferences == 1 && !isActivityChangingConfigurations) {
+                    // App entered foreground
+                }
+            }
+
+            @Override
+            public void onActivityResumed(@androidx.annotation.NonNull android.app.Activity activity) {}
+
+            @Override
+            public void onActivityPaused(@androidx.annotation.NonNull android.app.Activity activity) {}
+
+            @Override
+            public void onActivityStopped(@androidx.annotation.NonNull android.app.Activity activity) {
+                isActivityChangingConfigurations = activity.isChangingConfigurations();
+                if (--activityReferences == 0 && !isActivityChangingConfigurations) {
+                    // App entered background (user went home or switched app) -> lock PIN session!
+                    com.harithdev.focuslock.security.PinManager.lockSession();
+                }
+            }
+
+            @Override
+            public void onActivitySaveInstanceState(@androidx.annotation.NonNull android.app.Activity activity, @androidx.annotation.NonNull android.os.Bundle outState) {}
+
+            @Override
+            public void onActivityDestroyed(@androidx.annotation.NonNull android.app.Activity activity) {}
+        });
+
         scheduleMidnightReset();
     }
 
@@ -75,36 +122,5 @@ public class FocusLockApp extends Application {
 
         long diffMs = midnight.getTimeInMillis() - System.currentTimeMillis();
         return TimeUnit.MILLISECONDS.toMinutes(diffMs);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    //  MidnightResetWorker — inner class
-    //  Runs every night at midnight. Zeroes out all daily usage.
-    // ═══════════════════════════════════════════════════════════
-
-    public class MidnightResetWorker extends Worker {
-
-        public MidnightResetWorker(Context context, WorkerParameters params) {
-            super(context, params);
-        }
-
-        @Override
-        public Result doWork() {
-            try {
-                Context context = getApplicationContext();
-                FocusLockDatabase db = FocusLockDatabase.getInstance(context);
-
-                String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                        .format(new Date());
-
-                db.dailyUsageDao().resetAllForDate(today);
-                db.dailyUsageDao().deleteOldRecords(today);
-
-                return Result.success();
-
-            } catch (Exception e) {
-                return Result.retry();
-            }
-        }
     }
 }

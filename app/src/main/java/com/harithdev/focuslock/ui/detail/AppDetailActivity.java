@@ -39,6 +39,7 @@ public class AppDetailActivity extends AppCompatActivity {
 
     // Current state (loaded from DB or defaults)
     private AppRestriction restriction;
+    private AppDetailViewModel viewModel;
 
     // Currently selected number of sessions (2–6)
     private int selectedSlots = 4;
@@ -57,11 +58,44 @@ public class AppDetailActivity extends AppCompatActivity {
         appName     = getIntent().getStringExtra("appName");
 
         db = FocusLockDatabase.getInstance(this);
+        viewModel = new androidx.lifecycle.ViewModelProvider(this).get(AppDetailViewModel.class);
 
         setupHeader();
         setupClickListeners();
-        loadExistingSettings();
-        loadTodayUsage();
+        observeViewModel();
+        viewModel.load(packageName, appName);
+    }
+
+    private void observeViewModel() {
+        viewModel.getRestriction().observe(this, res -> {
+            if (res != null) {
+                this.restriction = res;
+                populateUI();
+            }
+        });
+
+        viewModel.getScreenTime().observe(this, usedMs -> {
+            if (usedMs == null || usedMs <= 0) {
+                binding.txtUsageToday.setText("📊 Used today: none");
+                return;
+            }
+            long totalMins = usedMs / 60_000;
+            long hours     = totalMins / 60;
+            long mins      = totalMins % 60;
+
+            String display = hours > 0 ? (hours + "h " + mins + "m") : (mins + " min");
+            binding.txtUsageToday.setText("📊 Used today: ~" + display);
+        });
+
+        viewModel.getSaveSuccess().observe(this, anyDelayed -> {
+            if (anyDelayed != null) {
+                String msg = Boolean.TRUE.equals(anyDelayed)
+                        ? "Settings saved ✓ — Relaxed changes take effect tomorrow"
+                        : "Settings saved ✓";
+                Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+                finish();
+            }
+        });
     }
 
     // ── Header ────────────────────────────────────────────────
@@ -78,24 +112,6 @@ public class AppDetailActivity extends AppCompatActivity {
                         getPackageManager().getApplicationIcon(packageName);
                 runOnUiThread(() -> binding.imgAppIcon.setImageDrawable(icon));
             } catch (Exception ignored) {}
-        }).start();
-    }
-
-    // ── Load existing settings from DB ────────────────────────
-
-    private void loadExistingSettings() {
-        new Thread(() -> {
-            AppRestriction existing = db.appRestrictionDao().getByPackageName(packageName);
-
-            runOnUiThread(() -> {
-                if (existing != null) {
-                    restriction = existing;
-                } else {
-                    // First time opening this app — create defaults
-                    restriction = new AppRestriction(packageName, appName);
-                }
-                populateUI();
-            });
         }).start();
     }
 
@@ -249,8 +265,8 @@ public class AppDetailActivity extends AppCompatActivity {
 
     private void updateAmPmStyle() {
         // Active button = purple tint, inactive = dim
-        int activeColor   = 0xFFC084FC;
-        int inactiveColor = 0xFF5A5475;
+        int activeColor   = androidx.core.content.ContextCompat.getColor(this, com.harithdev.focuslock.R.color.purple_primary);
+        int inactiveColor = androidx.core.content.ContextCompat.getColor(this, com.harithdev.focuslock.R.color.text_dim);
 
         binding.btnFromAm.setTextColor(binding.btnFromAm.isSelected() ? activeColor : inactiveColor);
         binding.btnFromPm.setTextColor(binding.btnFromPm.isSelected() ? activeColor : inactiveColor);
@@ -294,8 +310,8 @@ public class AppDetailActivity extends AppCompatActivity {
     }
 
     private void highlightSlot(int selected) {
-        int activeColor   = 0xFFC084FC;
-        int inactiveColor = 0xFF9990BB;
+        int activeColor   = androidx.core.content.ContextCompat.getColor(this, com.harithdev.focuslock.R.color.purple_primary);
+        int inactiveColor = androidx.core.content.ContextCompat.getColor(this, com.harithdev.focuslock.R.color.text_slot_inactive);
 
         binding.btnSlot2.setTextColor(selected == 2 ? activeColor : inactiveColor);
         binding.btnSlot3.setTextColor(selected == 3 ? activeColor : inactiveColor);
@@ -424,53 +440,7 @@ public class AppDetailActivity extends AppCompatActivity {
         }
 
         final boolean finalAnyDelayed = anyDelayed;
-
-        // Save to DB on background thread
-        new Thread(() -> {
-            // MUST insert parent (restriction) first to satisfy SQLite Foreign Key constraints
-            db.appRestrictionDao().insert(restriction); // REPLACE if exists
-
-            // Pre-populate totalUsedMs from system so enforcement starts accurately
-            if (restriction.isRestricted) {
-                String today = TimeUtils.todayString();
-                DailyUsage usage = db.dailyUsageDao().getUsage(packageName, today);
-                if (usage == null) {
-                    usage = new DailyUsage(packageName, today);
-                    db.dailyUsageDao().insert(usage);
-                }
-
-                // Seed totalUsedMs from the real system screen time.
-                // This ensures enforcement is accurate from the moment the user saves.
-                long systemUsedMs = UsageCalculator.getScreenTimeToday(this, packageName);
-                usage.totalUsedMs = systemUsedMs;
-
-                // In split-session mode, also pre-fill sessionsUsedToday
-                // so the session counter starts at the right number.
-                if (restriction.splitSessions && restriction.getSlotDurationMinutes() > 0) {
-                    long slotMs    = restriction.getSlotDurationMinutes() * 60_000L;
-                    long dailyMs   = restriction.dailyLimitMinutes * 60_000L;
-                    int slotsUsed  = (int) (systemUsedMs / slotMs);
-                    int maxSessions = restriction.sessionCount;
-                    // Cap at (max - 1) if daily limit not fully reached
-                    if (systemUsedMs < dailyMs) {
-                        usage.sessionsUsedToday = Math.min(slotsUsed, maxSessions - 1);
-                    } else {
-                        usage.sessionsUsedToday = maxSessions;
-                    }
-                } else {
-                    usage.sessionsUsedToday = 0;
-                }
-
-                db.dailyUsageDao().update(usage);
-            }
-            runOnUiThread(() -> {
-                String msg = finalAnyDelayed
-                    ? "Settings saved ✓ — Relaxed changes take effect tomorrow"
-                    : "Settings saved ✓";
-                android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show();
-                finish();
-            });
-        }).start();
+        viewModel.save(restriction, finalAnyDelayed);
     }
 
     // ── Helpers ───────────────────────────────────────────────
@@ -515,33 +485,11 @@ public class AppDetailActivity extends AppCompatActivity {
         return text.isEmpty() ? defaultVal : text;
     }
 
-    private void loadTodayUsage() {
-        new Thread(() -> {
-            // Use the shared UsageCalculator — same algorithm as enforcement
-            long usedMs = UsageCalculator.getScreenTimeToday(this, packageName);
-            runOnUiThread(() -> {
-                if (usedMs <= 0) {
-                    binding.txtUsageToday.setText("📊 Used today: none");
-                    return;
-                }
-                long totalMins = usedMs / 60_000;
-                long hours     = totalMins / 60;
-                long mins      = totalMins % 60;
-
-                String display;
-                if (hours > 0) {
-                    display = hours + "h " + mins + "m";
-                } else {
-                    display = mins + " min";
-                }
-                binding.txtUsageToday.setText("📊 Used today: ~" + display);
-            });
-        }).start();
-    }
-
     @Override
     protected void onResume() {
         super.onResume();
-        loadTodayUsage();
+        if (packageName != null && appName != null && viewModel != null) {
+            viewModel.load(packageName, appName);
+        }
     }
 }

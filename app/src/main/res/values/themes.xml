@@ -6,4 +6,17 @@
     </style>
 
     <style name="Theme.FocusLock" parent="Base.Theme.FocusLock" />
+
+    <style name="PinKeypadButton">
+        <item name="android:layout_width">64dp</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:layout_margin">12dp</item>
+        <item name="android:background">@drawable/bg_btn_circle</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">#ffffff</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
 </resources>

@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_bottom_sheet"
+    android:padding="24dp">
+
+    <!-- Drag Handle -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="#2e2e42"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Settings &amp; Security"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#f0eeff"
+        android:layout_marginBottom="16dp" />
+
+    <!-- ── Option 1: Change PIN ──────────────────────────────── -->
+    <LinearLayout
+        android:id="@+id/row_change_pin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="@drawable/bg_banner_card"
+        android:layout_marginBottom="10dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Change Security PIN"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#ffffff" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Update your 4-digit master passcode"
+                android:textSize="12sp"
+                android:textColor="#71717a"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="›"
+            android:textSize="22sp"
+            android:textColor="#525266" />
+
+    </LinearLayout>
+
+    <!-- ── Option 2: Uninstall Protection ───────────────────── -->
+    <LinearLayout
+        android:id="@+id/row_device_admin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="@drawable/bg_banner_card"
+        android:layout_marginBottom="10dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Uninstall Protection"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#ffffff" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Device Admin prevention from removal"
+                android:textSize="12sp"
+                android:textColor="#71717a"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/txt_admin_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Disabled"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#a1a1aa"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:background="@drawable/bg_chip_inactive"
+            android:layout_marginEnd="10dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="›"
+            android:textSize="22sp"
+            android:textColor="#525266" />
+
+    </LinearLayout>
+
+    <!-- ── Option 3: System Permissions ─────────────────────── -->
+    <LinearLayout
+        android:id="@+id/row_permissions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="@drawable/bg_banner_card"
+        android:layout_marginBottom="10dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="System Permissions"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#ffffff" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Usage stats, Overlay, Accessibility diagnostics"
+                android:textSize="12sp"
+                android:textColor="#71717a"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="›"
+            android:textSize="22sp"
+            android:textColor="#525266" />
+
+    </LinearLayout>
+
+    <!-- ── Option 4: About / Version ────────────────────────── -->
+    <LinearLayout
+        android:id="@+id/row_about"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="@drawable/bg_banner_card"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="FocusLock App"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#ffffff" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Version 1.0 • 100% Offline &amp; Private"
+                android:textSize="12sp"
+                android:textColor="#71717a"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ℹ️"
+            android:textSize="16sp" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -2,4 +2,26 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Brand / Accent Colors -->
+    <color name="purple_primary">#FFC084FC</color>
+    <color name="purple_gradient_start">#FFA855F7</color>
+    <color name="purple_gradient_end">#FF7C3AED</color>
+    <color name="purple_light">#FFD8B4FE</color>
+
+    <!-- Status Colors -->
+    <color name="status_granted">#FF4ADE80</color>
+    <color name="status_denied">#FFF87171</color>
+
+    <!-- Text & UI Elements -->
+    <color name="text_primary">#FFF0EEFF</color>
+    <color name="text_secondary">#FFA1A1AA</color>
+    <color name="text_dim">#FF5A5475</color>
+    <color name="text_slot_inactive">#FF9990BB</color>
+    <color name="text_muted">#FF71717A</color>
+
+    <!-- Surface / Backgrounds -->
+    <color name="surface_bg">#FF0A0A0F</color>
+    <color name="surface_card">#FF13131A</color>
+    <color name="surface_grid">#FF1F1F2E</color>
 </resources>

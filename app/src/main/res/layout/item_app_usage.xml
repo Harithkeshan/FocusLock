@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="12dp">
+
+    <!-- App Icon -->
+    <ImageView
+        android:id="@+id/img_app_icon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="12dp"
+        android:contentDescription="App Icon" />
+
+    <!-- App Info & Progress Bar -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/txt_app_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="App Name"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff" />
+
+        <ProgressBar
+            android:id="@+id/progress_app_usage"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="8dp"
+            android:progressDrawable="@drawable/progress_bar_custom"
+            android:max="100"
+            android:progress="0" />
+
+    </LinearLayout>
+
+    <!-- Usage Stats -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="end"
+        android:layout_marginStart="16dp">
+
+        <TextView
+            android:id="@+id/txt_usage_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="45m / 60m"
+            android:textSize="13sp"
+            android:textColor="#a1a1aa" />
+
+        <TextView
+            android:id="@+id/txt_usage_percentage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="75%"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#c084fc"
+            android:layout_marginTop="2dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_bottom_sheet"
+    android:padding="24dp">
+
+    <!-- Drag Handle -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="#2e2e42"
+        android:layout_marginBottom="20dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Set Recovery Question"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#ffffff"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Choose a question to recover your PIN safely if forgotten."
+        android:textSize="13sp"
+        android:textColor="#a1a1aa"
+        android:layout_marginBottom="20dp" />
+
+    <Spinner
+        android:id="@+id/spinner_questions"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:background="@drawable/bg_banner_card"
+        android:paddingHorizontal="12dp"
+        android:popupBackground="#14141e"
+        android:layout_marginBottom="14dp" />
+
+    <EditText
+        android:id="@+id/edit_answer"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:hint="Your Answer (e.g. Fluffy)"
+        android:textColorHint="#525266"
+        android:textColor="#ffffff"
+        android:textSize="15sp"
+        android:paddingHorizontal="16dp"
+        android:background="@drawable/bg_search_bar"
+        android:inputType="textAutoCorrect"
+        android:singleLine="true"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/btn_save_security"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="Save Security Recovery"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:textColor="#ffffff"
+        android:gravity="center"
+        android:background="@drawable/bg_button_primary"
+        android:clickable="true"
+        android:focusable="true" />
+
+</LinearLayout>

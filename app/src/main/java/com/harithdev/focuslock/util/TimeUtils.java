@@ -15,17 +15,17 @@ import java.util.Locale;
  */
 public class TimeUtils {
 
-    private static final SimpleDateFormat DATE_FORMAT =
-            new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+    private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()));
 
-    private static final SimpleDateFormat TIME_FORMAT =
-            new SimpleDateFormat("HH:mm", Locale.getDefault());
+    private static final ThreadLocal<SimpleDateFormat> TIME_FORMAT =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm", Locale.getDefault()));
 
     // ── Date helpers ──────────────────────────────────────────
 
     /** Returns today's date as "yyyy-MM-dd" e.g. "2025-08-15" */
     public static String todayString() {
-        return DATE_FORMAT.format(new Date());
+        return DATE_FORMAT.get().format(new Date());
     }
 
     /** Returns yesterday's date as "yyyy-MM-dd" — used to carry over
@@ -33,7 +33,7 @@ public class TimeUtils {
     public static String yesterdayString() {
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DATE, -1);
-        return DATE_FORMAT.format(cal.getTime());
+        return DATE_FORMAT.get().format(cal.getTime());
     }
 
     // ── Sleep mode helpers ────────────────────────────────────
@@ -61,6 +61,7 @@ public class TimeUtils {
                 return nowMins >= startMins || nowMins < endMins;
             }
         } catch (Exception e) {
+            timber.log.Timber.e(e, "Error evaluating sleep window %s - %s", sleepStart, sleepEnd);
             return false;
         }
     }
@@ -78,6 +79,7 @@ public class TimeUtils {
             int displayH = h > 12 ? h - 12 : (h == 0 ? 12 : h);
             return String.format(Locale.getDefault(), "%d:%02d %s", displayH, m, ampm);
         } catch (Exception e) {
+            timber.log.Timber.e(e, "Error formatting sleep end time %s", sleepEnd);
             return sleepEnd;
         }
     }

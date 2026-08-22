@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0a0a0f"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- ── Header ─────────────────────────────────────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:id="@+id/btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:text="←"
+                android:textSize="22sp"
+                android:textColor="#ffffff"
+                android:gravity="center"
+                android:background="@drawable/bg_btn_circle"
+                android:layout_marginEnd="12dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dashboard"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#f0eeff" />
+
+        </LinearLayout>
+
+        <!-- ── Today Summary Card ─────────────────────────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TODAY'S SCREEN TIME"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#a1a1aa"
+                android:letterSpacing="0.05" />
+
+            <TextView
+                android:id="@+id/txt_today_total"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0h 0m"
+                android:textSize="36sp"
+                android:textStyle="bold"
+                android:textColor="#ffffff"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:id="@+id/txt_today_sub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 restricted apps tracked today"
+                android:textSize="13sp"
+                android:textColor="#c084fc"
+                android:layout_marginTop="4dp" />
+
+        </LinearLayout>
+
+        <!-- ── Chart Card ─────────────────────────────────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="USAGE TRENDS"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#a1a1aa"
+                    android:letterSpacing="0.05" />
+
+                <!-- Range Selector Chips -->
+                <TextView
+                    android:id="@+id/chip_7d"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="7D"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#ffffff"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:background="@drawable/bg_chip_active"
+                    android:layout_marginEnd="6dp"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/chip_14d"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="14D"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#a1a1aa"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:background="@drawable/bg_chip_inactive"
+                    android:layout_marginEnd="6dp"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/chip_30d"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="30D"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#a1a1aa"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:background="@drawable/bg_chip_inactive"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+            </LinearLayout>
+
+            <!-- Custom Bar Chart View -->
+            <com.harithdev.focuslock.ui.dashboard.BarChartView
+                android:id="@+id/chart_view"
+                android:layout_width="match_parent"
+                android:layout_height="180dp" />
+
+            <!-- First-day empty state placeholder banner -->
+            <TextView
+                android:id="@+id/txt_empty_history_placeholder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🌱 Day 1 of FocusLock! Your multi-day trends will appear here starting tomorrow."
+                android:textSize="13sp"
+                android:textColor="#a1a1aa"
+                android:gravity="center"
+                android:padding="14dp"
+                android:background="@drawable/bg_banner_card"
+                android:layout_marginTop="12dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/txt_daily_average"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Daily average: 0h 0m"
+                android:textSize="13sp"
+                android:textColor="#a1a1aa"
+                android:layout_marginTop="12dp" />
+
+        </LinearLayout>
+
+        <!-- ── App Breakdown Card ─────────────────────────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="20dp"
+            android:layout_marginBottom="24dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TODAY'S APP BREAKDOWN"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#a1a1aa"
+                android:letterSpacing="0.05"
+                android:layout_marginBottom="12dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_app_usage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+
+            <TextView
+                android:id="@+id/txt_empty_apps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No restricted apps set up yet"
+                android:textSize="14sp"
+                android:textColor="#71717a"
+                android:layout_gravity="center_horizontal"
+                android:paddingVertical="16dp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

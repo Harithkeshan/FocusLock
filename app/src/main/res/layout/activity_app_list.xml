@@ -14,25 +14,48 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:padding="20dp"
         android:paddingBottom="12dp">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="FocusLock"
-            android:textSize="26sp"
-            android:textStyle="bold"
-            android:textColor="#f0eeff" />
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="FocusLock"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="#f0eeff" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tap an app to set restrictions"
+                android:textSize="13sp"
+                android:textColor="#5a5475"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
 
         <TextView
+            android:id="@+id/btn_settings"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tap an app to set restrictions"
+            android:text="Settings"
             android:textSize="13sp"
-            android:textColor="#5a5475"
-            android:layout_marginTop="2dp" />
+            android:textStyle="bold"
+            android:textColor="#f0eeff"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="8dp"
+            android:background="@drawable/bg_chip_inactive"
+            android:clickable="true"
+            android:focusable="true" />
 
     </LinearLayout>
 
@@ -159,6 +182,121 @@
 
     </LinearLayout>
 
+    <!-- ── Category Filter Chips ───────────────────────────── -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="12dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/chip_all"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="All"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#ffffff"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/bg_chip_active"
+                android:layout_marginEnd="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/chip_social"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💬 Social"
+                android:textSize="13sp"
+                android:textColor="#a1a1aa"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/bg_chip_inactive"
+                android:layout_marginEnd="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/chip_video"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🎬 Video"
+                android:textSize="13sp"
+                android:textColor="#a1a1aa"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/bg_chip_inactive"
+                android:layout_marginEnd="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/chip_messaging"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✉️ Chat"
+                android:textSize="13sp"
+                android:textColor="#a1a1aa"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/bg_chip_inactive"
+                android:layout_marginEnd="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/chip_gaming"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🎮 Games"
+                android:textSize="13sp"
+                android:textColor="#a1a1aa"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/bg_chip_inactive"
+                android:layout_marginEnd="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/chip_productivity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚡ Productivity"
+                android:textSize="13sp"
+                android:textColor="#a1a1aa"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/bg_chip_inactive"
+                android:layout_marginEnd="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/chip_other"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📦 Other"
+                android:textSize="13sp"
+                android:textColor="#a1a1aa"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/bg_chip_inactive"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </LinearLayout>
+    </HorizontalScrollView>
+
     <!-- ── Loading spinner ────────────────────────────────── -->
     <ProgressBar
         android:id="@+id/progress_bar"
@@ -172,8 +310,60 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingBottom="16dp" />
+
+    <!-- ── Divider Line ────────────────────────────────────── -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#242436" />
+
+    <!-- ── Bottom Navigation Bar (Segmented Text Tabs) ───────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#0e0e16"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp">
+
+        <!-- Tab 1: Apps (Active) -->
+        <TextView
+            android:id="@+id/tab_apps"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Apps"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:gravity="center"
+            android:paddingVertical="10dp"
+            android:background="@drawable/bg_chip_active"
+            android:layout_marginEnd="8dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Tab 2: Dashboard -->
+        <TextView
+            android:id="@+id/tab_dashboard"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Dashboard"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#a1a1aa"
+            android:gravity="center"
+            android:paddingVertical="10dp"
+            android:background="@drawable/bg_chip_inactive"
+            android:layout_marginStart="8dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
 
 </LinearLayout>

@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0a0a0f"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="24dp">
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Lock icon -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔒"
+        android:textSize="56sp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/txt_pin_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enter PIN"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:textColor="#ffffff"
+        android:gravity="center"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Subtitle / Instruction -->
+    <TextView
+        android:id="@+id/txt_pin_subtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="This PIN protects your FocusLock settings"
+        android:textSize="14sp"
+        android:textColor="#a1a1aa"
+        android:gravity="center"
+        android:layout_marginBottom="32dp" />
+
+    <!-- 4 PIN Dots -->
+    <LinearLayout
+        android:id="@+id/layout_pin_dots"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="48dp">
+
+        <View
+            android:id="@+id/dot_1"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_margin="10dp"
+            android:background="@drawable/bg_slot_inactive" />
+
+        <View
+            android:id="@+id/dot_2"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_margin="10dp"
+            android:background="@drawable/bg_slot_inactive" />
+
+        <View
+            android:id="@+id/dot_3"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_margin="10dp"
+            android:background="@drawable/bg_slot_inactive" />
+
+        <View
+            android:id="@+id/dot_4"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_margin="10dp"
+            android:background="@drawable/bg_slot_inactive" />
+
+    </LinearLayout>
+
+    <!-- Keypad Grid -->
+    <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="3"
+        android:rowCount="4"
+        android:alignmentMode="alignMargins">
+
+        <!-- Row 1 -->
+        <TextView
+            android:id="@+id/btn_key_1"
+            style="@style/PinKeypadButton"
+            android:text="1" />
+
+        <TextView
+            android:id="@+id/btn_key_2"
+            style="@style/PinKeypadButton"
+            android:text="2" />
+
+        <TextView
+            android:id="@+id/btn_key_3"
+            style="@style/PinKeypadButton"
+            android:text="3" />
+
+        <!-- Row 2 -->
+        <TextView
+            android:id="@+id/btn_key_4"
+            style="@style/PinKeypadButton"
+            android:text="4" />
+
+        <TextView
+            android:id="@+id/btn_key_5"
+            style="@style/PinKeypadButton"
+            android:text="5" />
+
+        <TextView
+            android:id="@+id/btn_key_6"
+            style="@style/PinKeypadButton"
+            android:text="6" />
+
+        <!-- Row 3 -->
+        <TextView
+            android:id="@+id/btn_key_7"
+            style="@style/PinKeypadButton"
+            android:text="7" />
+
+        <TextView
+            android:id="@+id/btn_key_8"
+            style="@style/PinKeypadButton"
+            android:text="8" />
+
+        <TextView
+            android:id="@+id/btn_key_9"
+            style="@style/PinKeypadButton"
+            android:text="9" />
+
+        <!-- Row 4 -->
+        <View
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_margin="12dp" />
+
+        <TextView
+            android:id="@+id/btn_key_0"
+            style="@style/PinKeypadButton"
+            android:text="0" />
+
+        <TextView
+            android:id="@+id/btn_key_delete"
+            style="@style/PinKeypadButton"
+            android:text="⌫"
+            android:textSize="20sp" />
+
+    </GridLayout>
+
+    <!-- Forgot PIN option -->
+    <TextView
+        android:id="@+id/btn_forgot_pin"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Forgot PIN?"
+        android:textSize="14sp"
+        android:textColor="#a855f7"
+        android:padding="12dp"
+        android:layout_marginTop="16dp"
+        android:visibility="gone" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+</LinearLayout>

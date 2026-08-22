@@ -21,36 +21,19 @@
         android:layout_height="46dp"
         android:scaleType="fitCenter" />
 
-    <!-- App name + package name -->
-    <LinearLayout
+    <!-- App name -->
+    <TextView
+        android:id="@+id/txt_app_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:orientation="vertical"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="#f0eeff"
         android:layout_marginStart="14dp"
-        android:layout_marginEnd="10dp">
-
-        <TextView
-            android:id="@+id/txt_app_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:textColor="#f0eeff"
-            android:maxLines="1"
-            android:ellipsize="end" />
-
-        <TextView
-            android:id="@+id/txt_package_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="11sp"
-            android:textColor="#5a5475"
-            android:layout_marginTop="2dp"
-            android:maxLines="1"
-            android:ellipsize="end" />
-
-    </LinearLayout>
+        android:layout_marginEnd="10dp"
+        android:maxLines="1"
+        android:ellipsize="end" />
 
     <!-- RESTRICTED badge — only visible when restriction is active -->
     <TextView

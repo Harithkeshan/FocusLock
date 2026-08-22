@@ -66,6 +66,12 @@ public class UsageTrackingService extends Service {
     /** Warning is sent when this many ms remain in the limit */
     private static final long   WARN_THRESHOLD_MS = 5 * 60_000L; // 5 minutes
 
+    // ── Item 7: Accessibility Service Health Watchdog ─────────────────
+    private static final String HEALTH_CHANNEL_ID      = "focuslock_health";
+    private static final String HEALTH_CHANNEL_NAME    = "FocusLock Protection Status";
+    private static final int    HEALTH_NOTIFICATION_ID = 9999;
+    private boolean healthAlertShown = false;
+
     private static final long   CHECK_INTERVAL_MS = 15_000; // 15 seconds
 
     /** SharedPreferences key prefix for tracking per-app, per-day warning state.
@@ -157,6 +163,9 @@ public class UsageTrackingService extends Service {
         if (now > lastKnownMs) {
             prefs.edit().putLong(KEY_LAST_KNOWN_MS, now).apply();
         }
+
+        // ── Item 7: Check Accessibility Service health on every cycle ──────
+        checkAccessibilityHealth();
 
         // ── Use Accessibility Service's real-time foreground detection ──
         String foreground = FocusLockAccessibilityService.currentForegroundApp;
@@ -348,6 +357,46 @@ public class UsageTrackingService extends Service {
         }
     }
 
+    // ── Item 7: Accessibility Service Health Watchdog ─────────────────
+    private void checkAccessibilityHealth() {
+        if (!FocusLockAccessibilityService.isServiceRunning) {
+            if (!healthAlertShown) {
+                showHealthAlert();
+                healthAlertShown = true;
+            }
+        } else {
+            if (healthAlertShown) {
+                NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                if (nm != null) nm.cancel(HEALTH_NOTIFICATION_ID);
+                healthAlertShown = false;
+            }
+        }
+    }
+
+    private void showHealthAlert() {
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (nm == null) return;
+
+        Intent intent = new Intent(this, com.harithdev.focuslock.ui.permission.PermissionActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        PendingIntent pi = PendingIntent.getActivity(
+                this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
+        );
+
+        Notification notif = new NotificationCompat.Builder(this, HEALTH_CHANNEL_ID)
+                .setContentTitle("⚠️ FocusLock protection is OFF")
+                .setContentText("Accessibility Service was disabled. Tap to re-enable protection.")
+                .setSmallIcon(com.harithdev.focuslock.R.drawable.ic_notification)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setOngoing(true)
+                .setContentIntent(pi)
+                .setAutoCancel(false)
+                .build();
+
+        nm.notify(HEALTH_NOTIFICATION_ID, notif);
+    }
+
     // ══════════════════════════════════════════════════════════════
     //  Notifications
     // ══════════════════════════════════════════════════════════════
@@ -369,6 +418,13 @@ public class UsageTrackingService extends Service {
             warnChannel.setDescription("Alerts when you're close to your app limit");
             warnChannel.enableVibration(true);
             nm.createNotificationChannel(warnChannel);
+
+            // Item 7: Health Watchdog channel
+            NotificationChannel healthChannel = new NotificationChannel(
+                    HEALTH_CHANNEL_ID, HEALTH_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH);
+            healthChannel.setDescription("Alerts when FocusLock protection is disabled");
+            healthChannel.enableVibration(true);
+            nm.createNotificationChannel(healthChannel);
         }
     }
 

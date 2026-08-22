@@ -574,7 +574,11 @@ public class FocusLockAccessibilityService extends AccessibilityService {
         IntentFilter screenFilter = new IntentFilter();
         screenFilter.addAction(Intent.ACTION_SCREEN_OFF);
         screenFilter.addAction(Intent.ACTION_SCREEN_ON);
-        registerReceiver(screenReceiver, screenFilter);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenReceiver, screenFilter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(screenReceiver, screenFilter);
+        }
         Log.d(TAG, "📺 Screen on/off receiver registered");
 
         // FIX 3: Clean up stale sessions left by a crash or phone restart.

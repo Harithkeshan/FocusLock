@@ -72,6 +72,9 @@ public class AppRestriction {
     public int enforcedCooldownMinutes;
     public String lastEnforcedSyncDate;
 
+    // ── App Categorization ────────────────────────────────────
+    public String category; // "Social", "Gaming", "Video", "Messaging", "Productivity", "Other"
+
     // ── Constructor ───────────────────────────────────────────
     public AppRestriction(@NonNull String packageName, String appName) {
         this.packageName      = packageName;
@@ -89,6 +92,7 @@ public class AppRestriction {
         this.enforcedSessionCount      = 4;
         this.enforcedCooldownMinutes   = 40;
         this.lastEnforcedSyncDate      = null;
+        this.category                  = "Other";
     }
 
     // ── Helper: minutes per slot ──────────────────────────────

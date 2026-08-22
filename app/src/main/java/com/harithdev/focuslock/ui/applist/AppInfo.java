@@ -14,5 +14,7 @@ public class AppInfo {
     public String   packageName;
     public String   appName;
     public Drawable icon;
-    public boolean  isRestricted; // true = has an active restriction saved
+    public boolean  isRestricted;      // true = has an active restriction saved
+    public String   category;          // category label (e.g. Social, Gaming)
+    public int      dailyLimitMinutes; // daily limit in minutes
 }
