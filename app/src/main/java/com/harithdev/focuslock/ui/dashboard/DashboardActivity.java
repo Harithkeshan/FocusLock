@@ -115,43 +115,30 @@ public class DashboardActivity extends AppCompatActivity {
     }
 
     private void loadChartDataInternal(FocusLockDatabase db) {
-        String startDate = getStartDate(selectedDays);
-        List<DailySummary> historySummaries = db.usageHistoryDao().getDailySummaries(startDate);
-
-        // Fill in full date sequence (including days with zero usage) up to today
-        List<DailySummary> fullSequence = buildFullDateSequence(selectedDays, historySummaries);
-
-        // Calculate today's live total screen time for restricted apps
         List<AppRestriction> restrictions = db.appRestrictionDao().getActiveRestrictions();
-        long todayLiveMs = 0;
-        for (AppRestriction app : restrictions) {
-            todayLiveMs += UsageCalculator.getScreenTimeToday(this, app.packageName);
-        }
 
-        // Replace/update today's value in the sequence with live calculation
-        String todayString = TimeUtils.todayString();
-        for (DailySummary item : fullSequence) {
-            if (item.date.equals(todayString)) {
-                item.totalUsedMs = todayLiveMs;
-            }
-        }
+        // Query exact daily usage directly from system UsageStatsManager for all days
+        List<DailySummary> fullSequence = buildFullDateSequenceFromSystem(selectedDays, restrictions);
 
         long totalSumMs = 0;
+        boolean hasAnyUsage = false;
+
         for (DailySummary item : fullSequence) {
             totalSumMs += item.totalUsedMs;
+            if (item.totalUsedMs > 0) hasAnyUsage = true;
         }
-        long averageMins = fullSequence.size() > 0 ? (totalSumMs / fullSequence.size()) / 60_000L : 0;
 
-        boolean isHistoryEmpty = historySummaries == null || historySummaries.isEmpty();
+        long averageMins = fullSequence.size() > 0 ? (totalSumMs / fullSequence.size()) / 60_000L : 0;
+        final boolean finalHasAnyUsage = hasAnyUsage;
 
         runOnUiThread(() -> {
             binding.chartView.setData(fullSequence);
             binding.txtDailyAverage.setText("Daily average: " + formatTimeShort(averageMins));
-            binding.txtEmptyHistoryPlaceholder.setVisibility(isHistoryEmpty ? View.VISIBLE : View.GONE);
+            binding.txtEmptyHistoryPlaceholder.setVisibility(finalHasAnyUsage ? View.GONE : View.VISIBLE);
         });
     }
 
-    private List<DailySummary> buildFullDateSequence(int days, List<DailySummary> history) {
+    private List<DailySummary> buildFullDateSequenceFromSystem(int days, List<AppRestriction> restrictions) {
         List<DailySummary> result = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         Calendar cal = Calendar.getInstance();
@@ -161,16 +148,7 @@ public class DashboardActivity extends AppCompatActivity {
 
         for (int i = 0; i < days; i++) {
             String dateStr = sdf.format(cal.getTime());
-            long usedMs = 0;
-
-            if (history != null) {
-                for (DailySummary h : history) {
-                    if (h.date.equals(dateStr)) {
-                        usedMs = h.totalUsedMs;
-                        break;
-                    }
-                }
-            }
+            long usedMs = UsageCalculator.getTotalRestrictedScreenTimeForDate(this, restrictions, dateStr);
 
             result.add(new DailySummary(dateStr, usedMs));
             cal.add(Calendar.DATE, 1);

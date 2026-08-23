@@ -56,20 +56,39 @@ public class UsageCalculator {
      * @return total screen time in milliseconds, or 0 if permission not granted
      */
     public static long getScreenTimeToday(Context context, String packageName) {
+        return getScreenTimeForDate(context, packageName, TimeUtils.todayString());
+    }
+
+    /**
+     * Returns total screen time in ms for a given app package on a specific date (yyyy-MM-dd).
+     */
+    public static long getScreenTimeForDate(Context context, String packageName, String dateStr) {
         try {
             UsageStatsManager usm = (UsageStatsManager)
                     context.getSystemService(Context.USAGE_STATS_SERVICE);
-            if (usm == null) return 0;
+            if (usm == null || dateStr == null) return 0;
 
-            // Build time range: from midnight today → now
-            Calendar midnight = Calendar.getInstance();
-            midnight.set(Calendar.HOUR_OF_DAY, 0);
-            midnight.set(Calendar.MINUTE, 0);
-            midnight.set(Calendar.SECOND, 0);
-            midnight.set(Calendar.MILLISECOND, 0);
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+            java.util.Date date = sdf.parse(dateStr);
+            if (date == null) return 0;
 
-            long startTime = midnight.getTimeInMillis();
-            long endTime   = System.currentTimeMillis();
+            Calendar startCal = Calendar.getInstance();
+            startCal.setTime(date);
+            startCal.set(Calendar.HOUR_OF_DAY, 0);
+            startCal.set(Calendar.MINUTE, 0);
+            startCal.set(Calendar.SECOND, 0);
+            startCal.set(Calendar.MILLISECOND, 0);
+            long startTime = startCal.getTimeInMillis();
+
+            Calendar endCal = Calendar.getInstance();
+            endCal.setTime(date);
+            endCal.set(Calendar.HOUR_OF_DAY, 23);
+            endCal.set(Calendar.MINUTE, 59);
+            endCal.set(Calendar.SECOND, 59);
+            endCal.set(Calendar.MILLISECOND, 999);
+            long endTime = Math.min(endCal.getTimeInMillis(), System.currentTimeMillis());
+
+            if (startTime > System.currentTimeMillis()) return 0;
 
             UsageEvents events = usm.queryEvents(startTime, endTime);
             if (events == null) return 0;
@@ -77,25 +96,21 @@ public class UsageCalculator {
             UsageEvents.Event event = new UsageEvents.Event();
 
             long totalScreenTimeMs = 0;
-            long lastResumedMs     = 0;  // timestamp of the last unmatched RESUMED event
+            long lastResumedMs     = 0;
 
             while (events.hasNextEvent()) {
                 events.getNextEvent(event);
 
-                // Only process events for the target app
                 if (!packageName.equals(event.getPackageName())) continue;
 
                 int type = event.getEventType();
 
                 if (type == ACTIVITY_RESUMED) {
-                    // App came to foreground — record the timestamp
                     lastResumedMs = event.getTimeStamp();
 
                 } else if (type == ACTIVITY_PAUSED) {
-                    // App left foreground — calculate this session's duration
                     if (lastResumedMs > 0) {
                         long sessionMs = event.getTimeStamp() - lastResumedMs;
-                        // Sanity check: ignore negative or impossibly long sessions
                         if (sessionMs > 0 && sessionMs < 24 * 60 * 60 * 1000L) {
                             totalScreenTimeMs += sessionMs;
                         }
@@ -104,19 +119,28 @@ public class UsageCalculator {
                 }
             }
 
-            // MIUI workaround: if we have an unmatched RESUMED (app still on screen),
-            // add the live elapsed time. The caller (AccessibilityService) tracks
-            // whether the app is truly in the foreground, but this ensures the
-            // display in AppDetailActivity is always up-to-date.
-            if (lastResumedMs > 0) {
-                totalScreenTimeMs += (endTime - lastResumedMs);
+            if (lastResumedMs > 0 && dateStr.equals(TimeUtils.todayString())) {
+                totalScreenTimeMs += (System.currentTimeMillis() - lastResumedMs);
             }
 
             return totalScreenTimeMs;
 
         } catch (Exception e) {
-            timber.log.Timber.e(e, "Failed to compute screen time for %s", packageName);
             return 0;
         }
+    }
+
+    /**
+     * Returns total screen time in ms across all restricted apps on a specific date (yyyy-MM-dd).
+     */
+    public static long getTotalRestrictedScreenTimeForDate(Context context,
+                                                           java.util.List<com.harithdev.focuslock.model.AppRestriction> restrictions,
+                                                           String dateStr) {
+        if (restrictions == null || restrictions.isEmpty()) return 0;
+        long totalMs = 0;
+        for (com.harithdev.focuslock.model.AppRestriction app : restrictions) {
+            totalMs += getScreenTimeForDate(context, app.packageName, dateStr);
+        }
+        return totalMs;
     }
 }
