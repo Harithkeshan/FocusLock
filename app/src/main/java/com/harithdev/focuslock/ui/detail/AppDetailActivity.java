@@ -76,7 +76,7 @@ public class AppDetailActivity extends AppCompatActivity {
 
         viewModel.getScreenTime().observe(this, usedMs -> {
             if (usedMs == null || usedMs <= 0) {
-                binding.txtUsageToday.setText("📊 Used today: none");
+                binding.txtUsageToday.setText("Used today: none");
                 return;
             }
             long totalMins = usedMs / 60_000;
@@ -84,15 +84,12 @@ public class AppDetailActivity extends AppCompatActivity {
             long mins      = totalMins % 60;
 
             String display = hours > 0 ? (hours + "h " + mins + "m") : (mins + " min");
-            binding.txtUsageToday.setText("📊 Used today: ~" + display);
+            binding.txtUsageToday.setText("Used today: ~" + display);
         });
 
         viewModel.getSaveSuccess().observe(this, anyDelayed -> {
             if (anyDelayed != null) {
-                String msg = Boolean.TRUE.equals(anyDelayed)
-                        ? "Settings saved ✓ — Relaxed changes take effect tomorrow"
-                        : "Settings saved ✓";
-                Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Settings saved ✓", Toast.LENGTH_LONG).show();
                 finish();
             }
         });
@@ -310,7 +307,7 @@ public class AppDetailActivity extends AppCompatActivity {
     }
 
     private void highlightSlot(int selected) {
-        int activeColor   = androidx.core.content.ContextCompat.getColor(this, com.harithdev.focuslock.R.color.purple_primary);
+        int activeColor   = androidx.core.content.ContextCompat.getColor(this, com.harithdev.focuslock.R.color.white);
         int inactiveColor = androidx.core.content.ContextCompat.getColor(this, com.harithdev.focuslock.R.color.text_slot_inactive);
 
         binding.btnSlot2.setTextColor(selected == 2 ? activeColor : inactiveColor);
@@ -405,29 +402,77 @@ public class AppDetailActivity extends AppCompatActivity {
 
         // ── Feature B: Direction-based enforcement ──────────────────
         boolean anyDelayed = false;
+        StringBuilder delayedMessage = new StringBuilder("You've relaxed one or more limits:\n\n");
 
-        // Daily limit: smaller = more restrictive
+        int newLimit = restriction.dailyLimitMinutes;
+        if (newLimit > restriction.enforcedDailyLimitMinutes && restriction.lastEnforcedSyncDate != null) {
+            anyDelayed = true;
+            delayedMessage.append("• Daily limit: ").append(formatMins(restriction.enforcedDailyLimitMinutes))
+                    .append(" → ").append(formatMins(newLimit)).append("\n");
+        }
+
+        int newCount = restriction.sessionCount;
+        // Session count: smaller count = larger slots = less restrictive
+        if (newCount < restriction.enforcedSessionCount && restriction.lastEnforcedSyncDate != null) {
+            anyDelayed = true;
+            delayedMessage.append("• Sessions: ").append(restriction.enforcedSessionCount)
+                    .append(" → ").append(newCount).append("\n");
+        }
+
+        int newCooldown = restriction.cooldownMinutes;
+        // Cooldown: smaller cooldown = less restrictive
+        if (newCooldown < restriction.enforcedCooldownMinutes && restriction.lastEnforcedSyncDate != null) {
+            anyDelayed = true;
+            delayedMessage.append("• Cooldown: ").append(restriction.enforcedCooldownMinutes).append(" min")
+                    .append(" → ").append(newCooldown).append(" min\n");
+        }
+
+        delayedMessage.append("\nThese changes will activate at midnight to protect your current session progress today.");
+
+        if (anyDelayed) {
+            showDelayedChangesDialog(delayedMessage.toString());
+        } else {
+            commitSave(false);
+        }
+    }
+
+    private String formatMins(int mins) {
+        if (mins < 60) return mins + " min";
+        if (mins % 60 == 0) return (mins / 60) + "h";
+        return (mins / 60) + "h " + (mins % 60) + "m";
+    }
+
+    private void showDelayedChangesDialog(String message) {
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.setContentView(com.harithdev.focuslock.R.layout.dialog_delayed_changes);
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+
+        android.widget.TextView txtMessage = dialog.findViewById(com.harithdev.focuslock.R.id.txtDialogMessage);
+        txtMessage.setText(message);
+
+        dialog.findViewById(com.harithdev.focuslock.R.id.btnCancel).setOnClickListener(v -> dialog.dismiss());
+        dialog.findViewById(com.harithdev.focuslock.R.id.btnSave).setOnClickListener(v -> {
+            dialog.dismiss();
+            commitSave(true);
+        });
+
+        dialog.show();
+    }
+
+    private void commitSave(boolean isDelayed) {
         int newLimit = restriction.dailyLimitMinutes;
         if (newLimit <= restriction.enforcedDailyLimitMinutes) {
             restriction.enforcedDailyLimitMinutes = newLimit;  // immediate
-        } else {
-            anyDelayed = true;  // keep current enforced (delayed)
         }
 
-        // Session count: larger = more restrictive (smaller slots)
         int newCount = restriction.sessionCount;
         if (newCount >= restriction.enforcedSessionCount) {
             restriction.enforcedSessionCount = newCount;  // immediate
-        } else {
-            anyDelayed = true;
         }
 
-        // Cooldown: larger = more restrictive
         int newCooldown = restriction.cooldownMinutes;
         if (newCooldown >= restriction.enforcedCooldownMinutes) {
             restriction.enforcedCooldownMinutes = newCooldown;  // immediate
-        } else {
-            anyDelayed = true;
         }
 
         // On first save (no enforced values yet), sync everything
@@ -436,11 +481,9 @@ public class AppDetailActivity extends AppCompatActivity {
             restriction.enforcedSessionCount      = restriction.sessionCount;
             restriction.enforcedCooldownMinutes   = restriction.cooldownMinutes;
             restriction.lastEnforcedSyncDate      = TimeUtils.todayString();
-            anyDelayed = false;
         }
 
-        final boolean finalAnyDelayed = anyDelayed;
-        viewModel.save(restriction, finalAnyDelayed);
+        viewModel.save(restriction, isDelayed);
     }
 
     // ── Helpers ───────────────────────────────────────────────

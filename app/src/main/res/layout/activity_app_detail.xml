@@ -7,7 +7,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0a0a0f"
+    android:background="@color/surface_bg"
     android:fillViewport="true">
 
     <LinearLayout
@@ -27,16 +27,16 @@
             android:gravity="center_vertical">
 
             <!-- Back button -->
-            <TextView
+            <ImageView
                 android:id="@+id/btn_back"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:text="‹"
-                android:textSize="24sp"
-                android:textColor="#9990bb"
-                android:gravity="center"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_chevron_left"
+                android:padding="10dp"
                 android:background="@drawable/bg_btn_circle"
-                android:layout_marginEnd="14dp" />
+                android:layout_marginEnd="14dp"
+                android:clickable="true"
+                android:focusable="true" />
 
             <!-- App icon -->
             <ImageView
@@ -59,14 +59,14 @@
                     android:layout_height="wrap_content"
                     android:textSize="17sp"
                     android:textStyle="bold"
-                    android:textColor="#f0eeff" />
+                    android:textColor="#FFFFFF" />
 
                 <TextView
                     android:id="@+id/txt_package_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="11sp"
-                    android:textColor="#5a5475"
+                    android:textColor="#64748B"
                     android:layout_marginTop="2dp" />
 
                 <!-- Today's usage chip -->
@@ -74,9 +74,9 @@
                     android:id="@+id/txt_usage_today"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📊 Used today: calculating..."
+                    android:text="Used today: calculating..."
                     android:textSize="11sp"
-                    android:textColor="#c084fc"
+                    android:textColor="#34d399"
                     android:background="@drawable/bg_badge_pill"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
@@ -102,14 +102,28 @@
             android:padding="16dp">
 
             <!-- Section label -->
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🔒 Restriction"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="#9990bb"
-                android:layout_marginBottom="12dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    android:layout_width="15dp"
+                    android:layout_height="15dp"
+                    android:src="@drawable/ic_lock_closed"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Restriction"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#94A3B8" />
+
+            </LinearLayout>
 
             <!-- Toggle row -->
             <LinearLayout
@@ -130,14 +144,14 @@
                         android:text="Restrict this app"
                         android:textSize="15sp"
                         android:textStyle="bold"
-                        android:textColor="#f0eeff" />
+                        android:textColor="#FFFFFF" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Enable all limits below"
                         android:textSize="12sp"
-                        android:textColor="#5a5475"
+                        android:textColor="#64748B"
                         android:layout_marginTop="3dp" />
 
                 </LinearLayout>
@@ -173,21 +187,35 @@
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="🌙 Sleep Mode"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="#9990bb" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="15dp"
+                        android:layout_height="15dp"
+                        android:src="@drawable/ic_moon_sleep"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sleep Mode"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="#94A3B8" />
+
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="optional"
                     android:textSize="10sp"
-                    android:textColor="#5a5475" />
+                    android:textColor="#64748B" />
 
             </LinearLayout>
 
@@ -210,7 +238,7 @@
                         android:text="Block during sleep hours"
                         android:textSize="15sp"
                         android:textStyle="bold"
-                        android:textColor="#f0eeff" />
+                        android:textColor="#FFFFFF" />
 
                     <TextView
                         android:id="@+id/txt_sleep_summary"
@@ -218,7 +246,7 @@
                         android:layout_height="wrap_content"
                         android:text="Off — no sleep block"
                         android:textSize="12sp"
-                        android:textColor="#5a5475"
+                        android:textColor="#64748B"
                         android:layout_marginTop="3dp" />
 
                 </LinearLayout>
@@ -253,7 +281,7 @@
                         android:layout_height="wrap_content"
                         android:text="From"
                         android:textSize="12sp"
-                        android:textColor="#5a5475" />
+                        android:textColor="#64748B" />
 
                     <EditText
                         android:id="@+id/input_from_hour"
@@ -261,7 +289,7 @@
                         android:layout_height="44dp"
                         android:text="1"
                         android:textSize="18sp"
-                        android:textColor="#f0eeff"
+                        android:textColor="#FFFFFF"
                         android:gravity="center"
                         android:background="@drawable/bg_input"
                         android:inputType="number"
@@ -272,7 +300,7 @@
                         android:layout_height="wrap_content"
                         android:text=":"
                         android:textSize="20sp"
-                        android:textColor="#5a5475"
+                        android:textColor="#64748B"
                         android:layout_marginStart="4dp"
                         android:layout_marginEnd="4dp" />
 
@@ -282,7 +310,7 @@
                         android:layout_height="44dp"
                         android:text="00"
                         android:textSize="18sp"
-                        android:textColor="#f0eeff"
+                        android:textColor="#FFFFFF"
                         android:gravity="center"
                         android:background="@drawable/bg_input"
                         android:inputType="number"
@@ -295,7 +323,7 @@
                         android:text="AM"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:textColor="#c084fc"
+                        android:textColor="#34d399"
                         android:gravity="center"
                         android:background="@drawable/bg_input"
                         android:layout_marginStart="8dp"
@@ -308,7 +336,7 @@
                         android:text="PM"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:textColor="#5a5475"
+                        android:textColor="#64748B"
                         android:gravity="center"
                         android:background="@drawable/bg_input"
                         android:layout_marginStart="6dp" />
@@ -327,7 +355,7 @@
                         android:layout_height="wrap_content"
                         android:text="Until"
                         android:textSize="12sp"
-                        android:textColor="#5a5475" />
+                        android:textColor="#64748B" />
 
                     <EditText
                         android:id="@+id/input_to_hour"
@@ -335,7 +363,7 @@
                         android:layout_height="44dp"
                         android:text="12"
                         android:textSize="18sp"
-                        android:textColor="#f0eeff"
+                        android:textColor="#FFFFFF"
                         android:gravity="center"
                         android:background="@drawable/bg_input"
                         android:inputType="number"
@@ -346,7 +374,7 @@
                         android:layout_height="wrap_content"
                         android:text=":"
                         android:textSize="20sp"
-                        android:textColor="#5a5475"
+                        android:textColor="#64748B"
                         android:layout_marginStart="4dp"
                         android:layout_marginEnd="4dp" />
 
@@ -356,7 +384,7 @@
                         android:layout_height="44dp"
                         android:text="00"
                         android:textSize="18sp"
-                        android:textColor="#f0eeff"
+                        android:textColor="#FFFFFF"
                         android:gravity="center"
                         android:background="@drawable/bg_input"
                         android:inputType="number"
@@ -369,7 +397,7 @@
                         android:text="AM"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:textColor="#5a5475"
+                        android:textColor="#64748B"
                         android:gravity="center"
                         android:background="@drawable/bg_input"
                         android:layout_marginStart="8dp" />
@@ -381,7 +409,7 @@
                         android:text="PM"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:textColor="#c084fc"
+                        android:textColor="#34d399"
                         android:gravity="center"
                         android:background="@drawable/bg_input"
                         android:layout_marginStart="6dp"
@@ -406,14 +434,28 @@
             android:background="@drawable/bg_card"
             android:padding="16dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⏱ Daily Limit"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="#9990bb"
-                android:layout_marginBottom="14dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="14dp">
+
+                <ImageView
+                    android:layout_width="15dp"
+                    android:layout_height="15dp"
+                    android:src="@drawable/ic_timer"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Daily Limit"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#94A3B8" />
+
+            </LinearLayout>
 
             <!-- Hours + Minutes picker -->
             <LinearLayout
@@ -437,7 +479,7 @@
                         android:text="1"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        android:textColor="#f0eeff"
+                        android:textColor="#FFFFFF"
                         android:gravity="center"
                         android:background="@drawable/bg_input"
                         android:inputType="number"
@@ -448,7 +490,7 @@
                         android:layout_height="wrap_content"
                         android:text="hours"
                         android:textSize="12sp"
-                        android:textColor="#5a5475"
+                        android:textColor="#64748B"
                         android:layout_marginTop="6dp" />
 
                 </LinearLayout>
@@ -458,7 +500,7 @@
                     android:layout_height="wrap_content"
                     android:text=":"
                     android:textSize="28sp"
-                    android:textColor="#5a5475"
+                    android:textColor="#64748B"
                     android:paddingBottom="16dp" />
 
                 <!-- Minutes -->
@@ -476,7 +518,7 @@
                         android:text="00"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        android:textColor="#f0eeff"
+                        android:textColor="#FFFFFF"
                         android:gravity="center"
                         android:background="@drawable/bg_input"
                         android:inputType="number"
@@ -487,7 +529,7 @@
                         android:layout_height="wrap_content"
                         android:text="minutes"
                         android:textSize="12sp"
-                        android:textColor="#5a5475"
+                        android:textColor="#64748B"
                         android:layout_marginTop="6dp" />
 
                 </LinearLayout>
@@ -509,14 +551,28 @@
             android:background="@drawable/bg_card"
             android:padding="16dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📊 Sessions"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="#9990bb"
-                android:layout_marginBottom="12dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    android:layout_width="15dp"
+                    android:layout_height="15dp"
+                    android:src="@drawable/ic_sessions_split"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sessions"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#94A3B8" />
+
+            </LinearLayout>
 
             <!-- Split toggle -->
             <LinearLayout
@@ -538,14 +594,14 @@
                         android:text="Split into sessions"
                         android:textSize="15sp"
                         android:textStyle="bold"
-                        android:textColor="#f0eeff" />
+                        android:textColor="#FFFFFF" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Break daily limit into equal slots"
                         android:textSize="12sp"
-                        android:textColor="#5a5475"
+                        android:textColor="#64748B"
                         android:layout_marginTop="3dp" />
 
                 </LinearLayout>
@@ -565,7 +621,7 @@
                 android:layout_height="wrap_content"
                 android:text="Continuous usage — full daily limit in one session."
                 android:textSize="13sp"
-                android:textColor="#5a5475"
+                android:textColor="#64748B"
                 android:visibility="visible" />
 
             <!-- Split config (hidden until toggle ON) -->
@@ -581,7 +637,7 @@
                     android:layout_height="wrap_content"
                     android:text="Number of sessions per day"
                     android:textSize="12sp"
-                    android:textColor="#5a5475"
+                    android:textColor="#64748B"
                     android:layout_marginBottom="10dp" />
 
                 <!-- Slot buttons: 2 3 4 5 6 -->
@@ -599,7 +655,7 @@
                         android:text="2"
                         android:textSize="20sp"
                         android:textStyle="bold"
-                        android:textColor="#9990bb"
+                        android:textColor="#94A3B8"
                         android:gravity="center"
                         android:background="@drawable/bg_slot_inactive"
                         android:layout_marginEnd="6dp" />
@@ -612,7 +668,7 @@
                         android:text="3"
                         android:textSize="20sp"
                         android:textStyle="bold"
-                        android:textColor="#9990bb"
+                        android:textColor="#94A3B8"
                         android:gravity="center"
                         android:background="@drawable/bg_slot_inactive"
                         android:layout_marginEnd="6dp" />
@@ -625,7 +681,7 @@
                         android:text="4"
                         android:textSize="20sp"
                         android:textStyle="bold"
-                        android:textColor="#c084fc"
+                        android:textColor="#FFFFFF"
                         android:gravity="center"
                         android:background="@drawable/bg_slot_active"
                         android:layout_marginEnd="6dp"
@@ -639,7 +695,7 @@
                         android:text="5"
                         android:textSize="20sp"
                         android:textStyle="bold"
-                        android:textColor="#9990bb"
+                        android:textColor="#94A3B8"
                         android:gravity="center"
                         android:background="@drawable/bg_slot_inactive"
                         android:layout_marginEnd="6dp" />
@@ -652,7 +708,7 @@
                         android:text="6"
                         android:textSize="20sp"
                         android:textStyle="bold"
-                        android:textColor="#9990bb"
+                        android:textColor="#94A3B8"
                         android:gravity="center"
                         android:background="@drawable/bg_slot_inactive" />
 
@@ -665,8 +721,8 @@
                     android:layout_height="wrap_content"
                     android:text=""
                     android:textSize="12sp"
-                    android:textColor="#9990bb"
-                    android:background="#1c1c26"
+                    android:textColor="#94A3B8"
+                    android:background="#1B1F27"
                     android:padding="12dp"
                     android:layout_marginBottom="16dp"
                     android:lineSpacingMultiplier="1.4" />
@@ -678,7 +734,7 @@
                     android:text="Cooldown between sessions"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    android:textColor="#f0eeff"
+                    android:textColor="#FFFFFF"
                     android:layout_marginBottom="10dp" />
 
                 <LinearLayout
@@ -694,7 +750,7 @@
                         android:layout_weight="1"
                         android:text="Block duration after each slot ends"
                         android:textSize="12sp"
-                        android:textColor="#5a5475" />
+                        android:textColor="#64748B" />
 
                     <TextView
                         android:id="@+id/txt_cooldown_value"
@@ -703,7 +759,7 @@
                         android:text="40 min"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        android:textColor="#c084fc" />
+                        android:textColor="#34d399" />
 
                 </LinearLayout>
 
@@ -728,37 +784,35 @@
                         android:layout_weight="1"
                         android:text="40 min"
                         android:textSize="10sp"
-                        android:textColor="#5a5475" />
+                        android:textColor="#64748B" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="5 hr"
                         android:textSize="10sp"
-                        android:textColor="#5a5475" />
+                        android:textColor="#64748B" />
 
                 </LinearLayout>
 
-                <!-- Warning chip -->
+                <!-- Info chip -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:background="#fbbf2411"
+                    android:background="@drawable/bg_info_pill"
                     android:padding="12dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="⚠"
-                        android:textSize="13sp"
-                        android:textColor="#fbbf24"
+                    <ImageView
+                        android:layout_width="15dp"
+                        android:layout_height="15dp"
+                        android:src="@drawable/ic_info_circle"
                         android:layout_marginEnd="8dp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Closing the app early still counts the full slot as used. Cooldown starts immediately."
+                        android:text="Leaving the app pauses your active session. Cooldown starts once your session slot time is completed."
                         android:textSize="12sp"
                         android:textColor="#fbbf24"
                         android:lineSpacingMultiplier="1.4" />

@@ -3,25 +3,31 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- Brand / Accent Colors -->
-    <color name="purple_primary">#FFC084FC</color>
-    <color name="purple_gradient_start">#FFA855F7</color>
-    <color name="purple_gradient_end">#FF7C3AED</color>
-    <color name="purple_light">#FFD8B4FE</color>
+    <!-- Brand / Accent Colors — Pure Punchy Emerald (10% Focal Accent) -->
+    <color name="emerald_primary">#FF10B981</color>
+    <color name="emerald_gradient_start">#FF10B981</color>
+    <color name="emerald_gradient_end">#FF059669</color>
+    <color name="emerald_light">#FF34D399</color>
+
+    <!-- Legacy aliases for R.color references -->
+    <color name="purple_primary">@color/emerald_primary</color>
+    <color name="purple_gradient_start">@color/emerald_gradient_start</color>
+    <color name="purple_gradient_end">@color/emerald_gradient_end</color>
+    <color name="purple_light">@color/emerald_light</color>
 
     <!-- Status Colors -->
-    <color name="status_granted">#FF4ADE80</color>
+    <color name="status_granted">#FF10B981</color>
     <color name="status_denied">#FFF87171</color>
 
-    <!-- Text & UI Elements -->
-    <color name="text_primary">#FFF0EEFF</color>
-    <color name="text_secondary">#FFA1A1AA</color>
-    <color name="text_dim">#FF5A5475</color>
-    <color name="text_slot_inactive">#FF9990BB</color>
-    <color name="text_muted">#FF71717A</color>
+    <!-- Text & UI Elements (30% Supporting) — Clean White & Neutral Silver -->
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FF94A3B8</color>
+    <color name="text_dim">#FF64748B</color>
+    <color name="text_slot_inactive">#FF64748B</color>
+    <color name="text_muted">#FF64748B</color>
 
-    <!-- Surface / Backgrounds -->
-    <color name="surface_bg">#FF0A0A0F</color>
-    <color name="surface_card">#FF13131A</color>
-    <color name="surface_grid">#FF1F1F2E</color>
+    <!-- Surface / Backgrounds (60% Dominant) — Neutral Obsidian & Charcoal -->
+    <color name="surface_bg">#FF0C0E12</color>
+    <color name="surface_card">#FF14171E</color>
+    <color name="surface_grid">#FF252B36</color>
 </resources>

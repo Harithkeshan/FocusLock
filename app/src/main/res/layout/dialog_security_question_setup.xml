@@ -12,7 +12,7 @@
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:background="#2e2e42"
+        android:background="#252B36"
         android:layout_marginBottom="20dp" />
 
     <TextView
@@ -29,7 +29,7 @@
         android:layout_height="wrap_content"
         android:text="Choose a question to recover your PIN safely if forgotten."
         android:textSize="13sp"
-        android:textColor="#a1a1aa"
+        android:textColor="#94A3B8"
         android:layout_marginBottom="20dp" />
 
     <Spinner
@@ -38,7 +38,7 @@
         android:layout_height="52dp"
         android:background="@drawable/bg_banner_card"
         android:paddingHorizontal="12dp"
-        android:popupBackground="#14141e"
+        android:popupBackground="#14171E"
         android:layout_marginBottom="14dp" />
 
     <EditText
@@ -46,7 +46,7 @@
         android:layout_width="match_parent"
         android:layout_height="52dp"
         android:hint="Your Answer (e.g. Fluffy)"
-        android:textColorHint="#525266"
+        android:textColorHint="#333B49"
         android:textColor="#ffffff"
         android:textSize="15sp"
         android:paddingHorizontal="16dp"

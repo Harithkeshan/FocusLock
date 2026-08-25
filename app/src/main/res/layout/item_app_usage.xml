@@ -57,7 +57,7 @@
             android:layout_height="wrap_content"
             android:text="45m / 60m"
             android:textSize="13sp"
-            android:textColor="#a1a1aa" />
+            android:textColor="#94A3B8" />
 
         <TextView
             android:id="@+id/txt_usage_percentage"
@@ -66,7 +66,7 @@
             android:text="75%"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="#c084fc"
+            android:textColor="#34d399"
             android:layout_marginTop="2dp" />
 
     </LinearLayout>

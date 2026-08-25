@@ -12,7 +12,7 @@
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:background="#2e2e42"
+        android:background="#252B36"
         android:layout_marginBottom="20dp" />
 
     <TextView
@@ -29,7 +29,7 @@
         android:layout_height="wrap_content"
         android:text="Answer your recovery question to reset your PIN."
         android:textSize="13sp"
-        android:textColor="#a1a1aa"
+        android:textColor="#94A3B8"
         android:layout_marginBottom="16dp" />
 
     <!-- Security Question Box -->
@@ -40,7 +40,7 @@
         android:text="What is your favorite book or movie?"
         android:textSize="15sp"
         android:textStyle="bold"
-        android:textColor="#d8b4fe"
+        android:textColor="#a7f3d0"
         android:padding="16dp"
         android:background="@drawable/bg_banner_card"
         android:layout_marginBottom="16dp" />
@@ -50,7 +50,7 @@
         android:layout_width="match_parent"
         android:layout_height="52dp"
         android:hint="Enter your Answer"
-        android:textColorHint="#525266"
+        android:textColorHint="#333B49"
         android:textColor="#ffffff"
         android:textSize="15sp"
         android:paddingHorizontal="16dp"

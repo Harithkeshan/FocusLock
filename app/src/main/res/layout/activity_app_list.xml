@@ -8,7 +8,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#0a0a0f">
+    android:background="@color/surface_bg">
 
     <!-- ── Header ─────────────────────────────────────────── -->
     <LinearLayout
@@ -31,14 +31,14 @@
                 android:text="FocusLock"
                 android:textSize="26sp"
                 android:textStyle="bold"
-                android:textColor="#f0eeff" />
+                android:textColor="#FFFFFF" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Tap an app to set restrictions"
                 android:textSize="13sp"
-                android:textColor="#5a5475"
+                android:textColor="#64748B"
                 android:layout_marginTop="2dp" />
 
         </LinearLayout>
@@ -50,7 +50,7 @@
             android:text="Settings"
             android:textSize="13sp"
             android:textStyle="bold"
-            android:textColor="#f0eeff"
+            android:textColor="#FFFFFF"
             android:paddingHorizontal="16dp"
             android:paddingVertical="8dp"
             android:background="@drawable/bg_chip_inactive"
@@ -82,14 +82,28 @@
             android:gravity="center_vertical"
             android:layout_marginBottom="6dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="⚠️ FocusLock may be killed by MIUI"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="#ffcc44" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_warning_triangle"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FocusLock may be killed by MIUI"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#ffcc44" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
@@ -98,7 +112,7 @@
             android:layout_height="wrap_content"
             android:text="Your Xiaomi device's battery optimizer may stop FocusLock in the background, disabling all restrictions."
             android:textSize="11sp"
-            android:textColor="#9990bb"
+            android:textColor="#94A3B8"
             android:lineSpacingMultiplier="1.3"
             android:layout_marginBottom="12dp" />
 
@@ -116,7 +130,7 @@
                 android:text="Disable Battery Saver"
                 android:textSize="11sp"
                 android:textStyle="bold"
-                android:textColor="#c084fc"
+                android:textColor="#34d399"
                 android:gravity="center"
                 android:background="@drawable/bg_button_secondary"
                 android:layout_marginEnd="6dp" />
@@ -149,12 +163,12 @@
         android:background="@drawable/bg_search_bar"
         android:padding="12dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🔍"
-            android:textSize="16sp"
-            android:layout_marginRight="8dp" />
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_search"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="8dp" />
 
         <EditText
             android:id="@+id/search_input"
@@ -162,7 +176,7 @@
             android:layout_weight="1"
             android:layout_height="wrap_content"
             android:hint="Search apps..."
-            android:textColor="#f0eeff"
+            android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:background="@null"
             android:inputType="text"
@@ -175,7 +189,7 @@
             android:layout_height="wrap_content"
             android:text="✕"
             android:textSize="16sp"
-            android:textColor="#9990bb"
+            android:textColor="#94A3B8"
             android:visibility="gone"
             android:paddingStart="8dp"
             android:paddingEnd="4dp" />
@@ -215,9 +229,9 @@
                 android:id="@+id/chip_social"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="💬 Social"
+                android:text="Social"
                 android:textSize="13sp"
-                android:textColor="#a1a1aa"
+                android:textColor="#94A3B8"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="6dp"
                 android:background="@drawable/bg_chip_inactive"
@@ -229,9 +243,9 @@
                 android:id="@+id/chip_video"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🎬 Video"
+                android:text="Video"
                 android:textSize="13sp"
-                android:textColor="#a1a1aa"
+                android:textColor="#94A3B8"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="6dp"
                 android:background="@drawable/bg_chip_inactive"
@@ -243,9 +257,9 @@
                 android:id="@+id/chip_messaging"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="✉️ Chat"
+                android:text="Chat"
                 android:textSize="13sp"
-                android:textColor="#a1a1aa"
+                android:textColor="#94A3B8"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="6dp"
                 android:background="@drawable/bg_chip_inactive"
@@ -257,9 +271,9 @@
                 android:id="@+id/chip_gaming"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🎮 Games"
+                android:text="Games"
                 android:textSize="13sp"
-                android:textColor="#a1a1aa"
+                android:textColor="#94A3B8"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="6dp"
                 android:background="@drawable/bg_chip_inactive"
@@ -271,9 +285,9 @@
                 android:id="@+id/chip_productivity"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⚡ Productivity"
+                android:text="Productivity"
                 android:textSize="13sp"
-                android:textColor="#a1a1aa"
+                android:textColor="#94A3B8"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="6dp"
                 android:background="@drawable/bg_chip_inactive"
@@ -285,9 +299,9 @@
                 android:id="@+id/chip_other"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📦 Other"
+                android:text="Other"
                 android:textSize="13sp"
-                android:textColor="#a1a1aa"
+                android:textColor="#94A3B8"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="6dp"
                 android:background="@drawable/bg_chip_inactive"
@@ -319,7 +333,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#242436" />
+        android:background="#252B36" />
 
     <!-- ── Bottom Navigation Bar (Segmented Text Tabs) ───────── -->
     <LinearLayout
@@ -356,7 +370,7 @@
             android:text="Dashboard"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="#a1a1aa"
+            android:textColor="#94A3B8"
             android:gravity="center"
             android:paddingVertical="10dp"
             android:background="@drawable/bg_chip_inactive"

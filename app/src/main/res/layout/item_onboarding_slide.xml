@@ -7,12 +7,11 @@
     android:gravity="center"
     android:padding="32dp">
 
-    <TextView
-        android:id="@+id/txt_emoji"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="⏱️"
-        android:textSize="80sp"
+    <ImageView
+        android:id="@+id/img_slide_icon"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/ic_timer"
         android:layout_marginBottom="40dp" />
 
     <TextView
@@ -32,7 +31,7 @@
         android:layout_height="wrap_content"
         android:text="Slide description text explaining the feature clearly."
         android:textSize="15sp"
-        android:textColor="#a1a1aa"
+        android:textColor="#94A3B8"
         android:gravity="center"
         android:lineSpacingMultiplier="1.3" />
 

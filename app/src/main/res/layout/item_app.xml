@@ -29,7 +29,7 @@
         android:layout_weight="1"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:textColor="#f0eeff"
+        android:textColor="#FFFFFF"
         android:layout_marginStart="14dp"
         android:layout_marginEnd="10dp"
         android:maxLines="1"
@@ -43,7 +43,7 @@
         android:text="ON"
         android:textSize="10sp"
         android:textStyle="bold"
-        android:textColor="#c084fc"
+        android:textColor="#34d399"
         android:background="@drawable/bg_badge_pill"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
@@ -57,7 +57,7 @@
         android:layout_height="wrap_content"
         android:text="›"
         android:textSize="20sp"
-        android:textColor="#2a2a38"
+        android:textColor="#252B36"
         android:layout_marginStart="8dp" />
 
 </LinearLayout>

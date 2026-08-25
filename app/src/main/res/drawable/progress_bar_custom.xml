@@ -1,19 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Unfilled background track -->
     <item android:id="@android:id/background">
         <shape android:shape="rectangle">
             <corners android:radius="4dp" />
-            <solid android:color="#242436" />
+            <solid android:color="#1B1F27" />
         </shape>
     </item>
 
-    <!-- Secondary progress (optional) -->
+    <!-- Secondary progress -->
     <item android:id="@android:id/secondaryProgress">
         <clip>
             <shape android:shape="rectangle">
                 <corners android:radius="4dp" />
-                <solid android:color="#33c084fc" />
+                <solid android:color="#3310B981" />
             </shape>
         </clip>
     </item>
@@ -23,7 +22,7 @@
         <clip>
             <shape android:shape="rectangle">
                 <corners android:radius="4dp" />
-                <solid android:color="#c084fc" />
+                <solid android:color="#10B981" />
             </shape>
         </clip>
     </item>

@@ -3,7 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0a0a0f"
+    android:background="@color/surface_bg"
     android:fillViewport="true">
 
     <LinearLayout
@@ -20,15 +20,13 @@
             android:gravity="center_vertical"
             android:layout_marginBottom="24dp">
 
-            <TextView
+            <ImageView
                 android:id="@+id/btn_back"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:text="←"
-                android:textSize="22sp"
-                android:textColor="#ffffff"
-                android:gravity="center"
-                android:background="@drawable/bg_chip_inactive"
+                android:src="@drawable/ic_chevron_left"
+                android:padding="10dp"
+                android:background="@drawable/bg_btn_circle"
                 android:layout_marginEnd="12dp"
                 android:clickable="true"
                 android:focusable="true" />
@@ -39,7 +37,7 @@
                 android:text="About FocusLock"
                 android:textSize="22sp"
                 android:textStyle="bold"
-                android:textColor="#f0eeff" />
+                android:textColor="#FFFFFF" />
 
         </LinearLayout>
 
@@ -73,10 +71,10 @@
                 android:text="v1.0 • Build 100"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:textColor="#c084fc"
+                android:textColor="#10B981"
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="4dp"
-                android:background="@drawable/bg_chip_active"
+                android:background="@drawable/bg_badge_pill"
                 android:layout_marginTop="6dp"
                 android:layout_marginBottom="12dp" />
 
@@ -85,7 +83,7 @@
                 android:layout_height="wrap_content"
                 android:text="Master your focus &amp; reclaim your digital time"
                 android:textSize="13sp"
-                android:textColor="#a1a1aa"
+                android:textColor="#94A3B8"
                 android:gravity="center" />
 
         </LinearLayout>
@@ -99,21 +97,35 @@
             android:padding="20dp"
             android:layout_marginBottom="14dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🔒 100% Offline &amp; Private"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#ffffff"
-                android:layout_marginBottom="6dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_privacy_shield"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="100% Offline &amp; Private"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#ffffff" />
+
+            </LinearLayout>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Zero account registration required, zero network telemetry, and zero cloud tracking. Your app restriction settings and screen time usage data stay 100% encrypted and stored locally on your device."
                 android:textSize="13sp"
-                android:textColor="#a1a1aa"
+                android:textColor="#94A3B8"
                 android:lineSpacingExtra="3dp" />
 
         </LinearLayout>
@@ -127,21 +139,35 @@
             android:padding="20dp"
             android:layout_marginBottom="14dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⚡ Real-time Enforcement Engine"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#ffffff"
-                android:layout_marginBottom="6dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_bolt_speed"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Real-time Enforcement Engine"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#ffffff" />
+
+            </LinearLayout>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Powered by Android Accessibility Services and System Overlay APIs. Sub-second app detection blocks distractions immediately without battery drain."
                 android:textSize="13sp"
-                android:textColor="#a1a1aa"
+                android:textColor="#94A3B8"
                 android:lineSpacingExtra="3dp" />
 
         </LinearLayout>
@@ -155,21 +181,35 @@
             android:padding="20dp"
             android:layout_marginBottom="24dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🛡️ Tamper &amp; Uninstall Protection"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#ffffff"
-                android:layout_marginBottom="6dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_security_shield"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tamper &amp; Uninstall Protection"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#ffffff" />
+
+            </LinearLayout>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Integrated Android Device Admin policy prevents unauthorized app uninstallation or bypasses when restrictions are active."
                 android:textSize="13sp"
-                android:textColor="#a1a1aa"
+                android:textColor="#94A3B8"
                 android:lineSpacingExtra="3dp" />
 
         </LinearLayout>
@@ -187,14 +227,14 @@
                 android:layout_height="wrap_content"
                 android:text="Built with Android Jetpack • MVVM • Room Database"
                 android:textSize="11sp"
-                android:textColor="#525266" />
+                android:textColor="#333B49" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Copyright © 2026 FocusLock. All rights reserved."
                 android:textSize="11sp"
-                android:textColor="#3a3a4e"
+                android:textColor="#252B36"
                 android:layout_marginTop="4dp" />
 
         </LinearLayout>

@@ -3,6 +3,7 @@ package com.harithdev.focuslock.ui.onboarding;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
+import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -13,12 +14,12 @@ import java.util.List;
 public class OnboardingAdapter extends RecyclerView.Adapter<OnboardingAdapter.SlideViewHolder> {
 
     public static class SlideItem {
-        public final String emoji;
+        public final int iconRes;
         public final String title;
         public final String description;
 
-        public SlideItem(String emoji, String title, String description) {
-            this.emoji = emoji;
+        public SlideItem(@DrawableRes int iconRes, String title, String description) {
+            this.iconRes = iconRes;
             this.title = title;
             this.description = description;
         }
@@ -41,7 +42,7 @@ public class OnboardingAdapter extends RecyclerView.Adapter<OnboardingAdapter.Sl
     @Override
     public void onBindViewHolder(@NonNull SlideViewHolder holder, int position) {
         SlideItem slide = slides.get(position);
-        holder.binding.txtEmoji.setText(slide.emoji);
+        holder.binding.imgSlideIcon.setImageResource(slide.iconRes);
         holder.binding.txtTitle.setText(slide.title);
         holder.binding.txtDescription.setText(slide.description);
     }

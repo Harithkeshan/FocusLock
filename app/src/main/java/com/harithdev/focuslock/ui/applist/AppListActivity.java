@@ -186,7 +186,7 @@ public class AppListActivity extends AppCompatActivity {
         boolean isAdmin = dpm != null && dpm.isAdminActive(admin);
 
         sheetBinding.txtAdminStatus.setText(isAdmin ? "Protected ✓" : "Disabled");
-        sheetBinding.txtAdminStatus.setTextColor(isAdmin ? 0xFFFFFFFF : 0xFFA1A1AA);
+        sheetBinding.txtAdminStatus.setTextColor(isAdmin ? 0xFFFFFFFF : 0xFF94A3B8);
         sheetBinding.txtAdminStatus.setBackgroundResource(isAdmin ?
                 com.harithdev.focuslock.R.drawable.bg_chip_active :
                 com.harithdev.focuslock.R.drawable.bg_chip_inactive);

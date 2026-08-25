@@ -237,7 +237,7 @@ public class PinActivity extends AppCompatActivity {
                 View v = super.getDropDownView(position, convertView, parent);
                 if (v instanceof android.widget.TextView) {
                     ((android.widget.TextView) v).setTextColor(0xFFFFFFFF);
-                    ((android.widget.TextView) v).setBackgroundColor(0xFF14141E);
+                    ((android.widget.TextView) v).setBackgroundColor(0xFF14171E);
                     ((android.widget.TextView) v).setPadding(32, 24, 32, 24);
                 }
                 return v;

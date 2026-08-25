@@ -38,17 +38,17 @@ public class OnboardingActivity extends AppCompatActivity {
     private void setupSlides() {
         slides = new ArrayList<>();
         slides.add(new OnboardingAdapter.SlideItem(
-                "⏱️",
+                R.drawable.ic_timer,
                 "Take control of your screen time",
                 "Set daily limits for any app. FocusLock enforces them so you don't have to rely on willpower."
         ));
         slides.add(new OnboardingAdapter.SlideItem(
-                "🔄",
+                R.drawable.ic_sessions_split,
                 "Smart sessions & cooldowns",
                 "Split your time into sessions with breaks between them. Step away mid-session? Your timer pauses automatically."
         ));
         slides.add(new OnboardingAdapter.SlideItem(
-                "🛡️",
+                R.drawable.ic_security_shield,
                 "Tamper-proof protection",
                 "PIN lock, direction-based enforcement, and sleep mode keep your limits locked in — even from yourself."
         ));

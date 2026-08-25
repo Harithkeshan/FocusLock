@@ -64,28 +64,40 @@ public class PermissionActivity extends AppCompatActivity {
         binding.txtUsageStatus.setText(usageOk ? "✓  Granted" : "Not granted");
         binding.txtUsageStatus.setTextColor(usageOk ? grantedColor : deniedColor);
         binding.txtUsageStatus.setBackgroundResource(usageOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
-        binding.btnGrantUsage.setAlpha(usageOk ? 0.4f : 1.0f);
+        binding.btnGrantUsage.setText(usageOk ? "Granted ✓" : "Grant Usage Access");
+        binding.btnGrantUsage.setBackgroundResource(usageOk ? com.harithdev.focuslock.R.drawable.bg_button_secondary : com.harithdev.focuslock.R.drawable.bg_button_primary);
+        binding.btnGrantUsage.setTextColor(usageOk ? 0xFF94A3B8 : 0xFFFFFFFF);
+        binding.btnGrantUsage.setAlpha(usageOk ? 0.6f : 1.0f);
         binding.btnGrantUsage.setEnabled(!usageOk);
 
         // Overlay row
         binding.txtOverlayStatus.setText(overlayOk ? "✓  Granted" : "Not granted");
         binding.txtOverlayStatus.setTextColor(overlayOk ? grantedColor : deniedColor);
         binding.txtOverlayStatus.setBackgroundResource(overlayOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
-        binding.btnGrantOverlay.setAlpha(overlayOk ? 0.4f : 1.0f);
+        binding.btnGrantOverlay.setText(overlayOk ? "Granted ✓" : "Grant Draw Over Apps");
+        binding.btnGrantOverlay.setBackgroundResource(overlayOk ? com.harithdev.focuslock.R.drawable.bg_button_secondary : com.harithdev.focuslock.R.drawable.bg_button_primary);
+        binding.btnGrantOverlay.setTextColor(overlayOk ? 0xFF94A3B8 : 0xFFFFFFFF);
+        binding.btnGrantOverlay.setAlpha(overlayOk ? 0.6f : 1.0f);
         binding.btnGrantOverlay.setEnabled(!overlayOk);
 
         // Accessibility row
         binding.txtAccessibilityStatus.setText(accessibilityOk ? "✓  Granted" : "Not granted");
         binding.txtAccessibilityStatus.setTextColor(accessibilityOk ? grantedColor : deniedColor);
         binding.txtAccessibilityStatus.setBackgroundResource(accessibilityOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
-        binding.btnGrantAccessibility.setAlpha(accessibilityOk ? 0.4f : 1.0f);
+        binding.btnGrantAccessibility.setText(accessibilityOk ? "Granted ✓" : "Grant Accessibility Access");
+        binding.btnGrantAccessibility.setBackgroundResource(accessibilityOk ? com.harithdev.focuslock.R.drawable.bg_button_secondary : com.harithdev.focuslock.R.drawable.bg_button_primary);
+        binding.btnGrantAccessibility.setTextColor(accessibilityOk ? 0xFF94A3B8 : 0xFFFFFFFF);
+        binding.btnGrantAccessibility.setAlpha(accessibilityOk ? 0.6f : 1.0f);
         binding.btnGrantAccessibility.setEnabled(!accessibilityOk);
 
         // Notification row
         binding.txtNotificationStatus.setText(notificationOk ? "✓  Granted" : "Not granted");
         binding.txtNotificationStatus.setTextColor(notificationOk ? grantedColor : deniedColor);
         binding.txtNotificationStatus.setBackgroundResource(notificationOk ? com.harithdev.focuslock.R.drawable.bg_status_granted : com.harithdev.focuslock.R.drawable.bg_status_not_granted);
-        binding.btnGrantNotification.setAlpha(notificationOk ? 0.4f : 1.0f);
+        binding.btnGrantNotification.setText(notificationOk ? "Granted ✓" : "Grant Notification Access");
+        binding.btnGrantNotification.setBackgroundResource(notificationOk ? com.harithdev.focuslock.R.drawable.bg_button_secondary : com.harithdev.focuslock.R.drawable.bg_button_primary);
+        binding.btnGrantNotification.setTextColor(notificationOk ? 0xFF94A3B8 : 0xFFFFFFFF);
+        binding.btnGrantNotification.setAlpha(notificationOk ? 0.6f : 1.0f);
         binding.btnGrantNotification.setEnabled(!notificationOk);
 
         // Continue button — only enabled when required 4 are granted

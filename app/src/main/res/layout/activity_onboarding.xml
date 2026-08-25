@@ -3,7 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0a0a0f"
+    android:background="@color/surface_bg"
     android:orientation="vertical"
     android:padding="24dp">
 
@@ -58,7 +58,7 @@
             android:layout_height="48dp"
             android:text="Skip"
             android:textSize="15sp"
-            android:textColor="#a1a1aa"
+            android:textColor="#94A3B8"
             android:gravity="center"
             android:paddingHorizontal="16dp"
             android:clickable="true"

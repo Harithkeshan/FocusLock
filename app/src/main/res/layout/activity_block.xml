@@ -11,7 +11,7 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="40dp"
-    android:background="#0a0a0f">
+    android:background="@color/surface_bg">
 
     <!-- Card Container for Content -->
     <LinearLayout
@@ -22,13 +22,12 @@
         android:background="@drawable/bg_card"
         android:padding="32dp">
 
-        <!-- Big emoji -->
-        <TextView
-            android:id="@+id/txt_emoji"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🔒"
-            android:textSize="72sp"
+        <!-- Big hero icon -->
+        <ImageView
+            android:id="@+id/img_block_icon"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:src="@drawable/ic_lock_closed"
             android:layout_marginBottom="32dp" />
 
         <!-- Main title e.g. "Daily limit reached" -->
@@ -39,7 +38,7 @@
             android:text="Daily limit reached"
             android:textSize="26sp"
             android:textStyle="bold"
-            android:textColor="#f0eeff"
+            android:textColor="#FFFFFF"
             android:gravity="center"
             android:layout_marginBottom="14dp" />
 
@@ -50,7 +49,7 @@
             android:layout_height="wrap_content"
             android:text="Come back tomorrow"
             android:textSize="16sp"
-            android:textColor="#9990bb"
+            android:textColor="#94A3B8"
             android:gravity="center"
             android:lineSpacingMultiplier="1.4"
             android:layout_marginBottom="40dp" />
@@ -59,7 +58,7 @@
         <View
             android:layout_width="48dp"
             android:layout_height="1dp"
-            android:background="#2a2a38"
+            android:background="#252B36"
             android:layout_marginBottom="40dp" />
 
         <!-- Go to home screen button -->
@@ -70,7 +69,7 @@
             android:text="Go to Home Screen"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="#c084fc"
+            android:textColor="#34d399"
             android:gravity="center"
             android:background="@drawable/bg_button_secondary" />
 
@@ -82,7 +81,7 @@
         android:layout_height="wrap_content"
         android:text="FocusLock is keeping you on track"
         android:textSize="11sp"
-        android:textColor="#2a2a38"
+        android:textColor="#252B36"
         android:gravity="center"
         android:layout_marginTop="32dp" />
 

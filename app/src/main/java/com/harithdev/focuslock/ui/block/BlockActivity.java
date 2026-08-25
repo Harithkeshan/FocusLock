@@ -88,7 +88,7 @@ public class BlockActivity extends Activity {
 
             // ─── 1. SLEEP MODE ────────────────────────────────
             case REASON_SLEEP:
-                binding.txtEmoji.setText("🌙");
+                binding.imgBlockIcon.setImageResource(R.drawable.ic_moon_sleep);
                 binding.txtTitle.setText(getString(R.string.block_title_sleep));
                 binding.txtSubtitle.setText(getString(R.string.block_subtitle_sleep,
                         TimeUtils.formatSleepEndTime(sleepEnd != null ? sleepEnd : "")));
@@ -97,7 +97,7 @@ public class BlockActivity extends Activity {
             // ─── 2. SESSION TIMED OUT (Behaviour 1) ──────────
             // User continuously used the app until their slot ran out
             case REASON_SESSION_TIMEOUT:
-                binding.txtEmoji.setText("⏰");
+                binding.imgBlockIcon.setImageResource(R.drawable.ic_timer);
                 binding.txtTitle.setText(getString(R.string.block_title_session_timeout));
                 binding.txtSubtitle.setText(getString(R.string.block_subtitle_session_timeout,
                         TimeUtils.formatCooldownEnd(cooldownEndsMs)));
@@ -106,7 +106,7 @@ public class BlockActivity extends Activity {
             // ─── 3. EARLY EXIT COOLDOWN (Behaviour 2) ────────
             // User left the app mid-session; that still counts as a session
             case REASON_EARLY_EXIT:
-                binding.txtEmoji.setText("🧘");
+                binding.imgBlockIcon.setImageResource(R.drawable.ic_cooldown_pause);
                 binding.txtTitle.setText(getString(R.string.block_title_early_exit));
                 binding.txtSubtitle.setText(getString(R.string.block_subtitle_early_exit,
                         TimeUtils.formatCooldownEnd(cooldownEndsMs)));
@@ -115,7 +115,7 @@ public class BlockActivity extends Activity {
             // ─── 4. DAILY LIMIT REACHED (no sessions mode) ───
             // Cumulative screen time for the day has hit the cap
             case REASON_LIMIT:
-                binding.txtEmoji.setText("🔒");
+                binding.imgBlockIcon.setImageResource(R.drawable.ic_hourglass);
                 binding.txtTitle.setText(getString(R.string.block_title_limit));
                 binding.txtSubtitle.setText(getString(R.string.block_subtitle_limit));
                 break;
@@ -126,14 +126,14 @@ public class BlockActivity extends Activity {
                 String sessionLabel = sessionCount > 0
                         ? getString(R.string.block_title_all_sessions_count, sessionCount)
                         : getString(R.string.block_title_all_sessions_no_count);
-                binding.txtEmoji.setText("🏁");
+                binding.imgBlockIcon.setImageResource(R.drawable.ic_sessions_split);
                 binding.txtTitle.setText(sessionLabel);
                 binding.txtSubtitle.setText(getString(R.string.block_subtitle_all_sessions));
                 break;
 
             // ─── Fallback (should never happen) ──────────────
             default:
-                binding.txtEmoji.setText("🔒");
+                binding.imgBlockIcon.setImageResource(R.drawable.ic_lock_closed);
                 binding.txtTitle.setText(getString(R.string.block_title_fallback));
                 binding.txtSubtitle.setText(getString(R.string.block_subtitle_fallback));
                 break;

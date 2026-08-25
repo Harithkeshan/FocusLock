@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Shackle -->
+    <path
+        android:pathData="M7,10V7C7,4.24 9.24,2 12,2C14.76,2 17,4.24 17,7V10"
+        android:strokeWidth="2"
+        android:strokeColor="#34D399"
+        android:strokeLineCap="round"/>
+    <!-- Lock Body -->
+    <path
+        android:pathData="M6,10H18C19.1,10 20,10.9 20,12V20C20,21.1 19.1,22 18,22H6C4.9,22 4,21.1 4,20V12C4,10.9 4.9,10 6,10Z"
+        android:fillColor="#34D399"/>
+    <!-- Keyhole -->
+    <path
+        android:pathData="M12,14C11.17,14 10.5,14.67 10.5,15.5C10.5,16.08 10.83,16.58 11.3,16.82L10.8,19H13.2L12.7,16.82C13.17,16.58 13.5,16.08 13.5,15.5C13.5,14.67 12.83,14 12,14Z"
+        android:fillColor="#050807"/>
+</vector>
