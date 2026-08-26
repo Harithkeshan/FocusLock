@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔒 FocusLock
+# FocusLock
 
 **Take back your time. One session at a time.**
 
@@ -15,7 +15,7 @@ A powerful Android app that doesn't just block distracting apps — it splits yo
 
 ---
 
-## 💡 Why FocusLock?
+## Why FocusLock?
 
 Most app blockers give you a hard daily limit — **use it up, and you're done for the day.**
 
@@ -25,9 +25,9 @@ FocusLock takes a completely different approach. Instead of a single wall, it **
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🧩 Session Splitting — *The Core Differentiator*
+### Session Splitting — *The Core Differentiator*
 Split any daily limit into equal sessions with enforced cooldowns between them. This is the feature that makes FocusLock fundamentally different from every other app blocker on the market.
 
 | Setting | What it does |
@@ -36,32 +36,32 @@ Split any daily limit into equal sessions with enforced cooldowns between them. 
 | **Number of Sessions** | How many chunks to split it into (e.g., 4) |
 | **Cooldown Duration** | Mandatory break between sessions (40 min – 5 hours) |
 
-### 🎯 5 Context-Aware Block Screens
+### 5 Context-Aware Block Screens
 Not a generic "App Blocked" wall. FocusLock shows a **different, tailored message** depending on exactly *why* the app was blocked:
 
-| Reason | Message | Icon |
+| Reason | Message | Icon Type |
 |---|---|---|
-| Sleep hours active | *"Sleep hours, phone down!"* | 🌙 Moon |
-| Session slot used up | *"Time's up for this session!"* | ⏱️ Timer |
-| Exited during cooldown | *"Good call stepping away!"* | ⏸️ Pause |
-| Daily limit reached | *"That's your daily dose!"* | ⏳ Hourglass |
-| All sessions exhausted | *"All sessions done for today!"* | 📊 Sessions |
+| Sleep hours active | *"Sleep hours, phone down!"* | Moon |
+| Session slot used up | *"Time's up for this session!"* | Timer |
+| Exited during cooldown | *"Good call stepping away!"* | Pause |
+| Daily limit reached | *"That's your daily dose!"* | Hourglass |
+| All sessions exhausted | *"All sessions done for today!"* | Sessions |
 
-### 🌙 Sleep Mode
+### Sleep Mode
 Block apps entirely during your sleep hours (e.g., 11 PM – 7 AM). Per-app configurable.
 
-### 🛡️ Anti-Bypass Protection
+### Anti-Bypass Protection
 - **PIN Lock** with security question recovery
 - **Device Admin Protection** to prevent uninstallation
 - **Direction-Aware Enforcement** — making restrictions stricter takes effect immediately; relaxing them only applies the next day (so you can't cheat in the moment)
 - **Early Exit Cooldown** — leaving an app mid-session still triggers a cooldown period before you can return, preventing rapid on-off abuse
 
-### 🔒 100% Offline & Private
+### 100% Offline & Private
 FocusLock has **zero network permissions**. No data collection, no analytics, no cloud sync. Your usage data never leaves your device — ever.
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## Architecture & Tech Stack
 
 FocusLock is built with a clean, modern Android architecture:
 
@@ -99,7 +99,7 @@ FocusLock is built with a clean, modern Android architecture:
 
 ---
 
-## 🧠 Technical Highlights
+## Technical Highlights
 
 <details>
 <summary><b>Smart Window Visibility Detection</b></summary>
@@ -135,7 +135,7 @@ Warning notifications use static channel keys and intelligent de-duplication to 
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Android Studio Hedgehog (2023.1.1) or later
@@ -166,13 +166,13 @@ git clone https://github.com/Harithkeshan/FocusLock.git
 
 ---
 
-## 🎨 Design Language
+## Design Language
 
 *FocusLock uses a custom dark design system — Neutral Obsidian surfaces with Emerald Green accents — built entirely with Android Vector Drawables and no third-party icon packs.*
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 app/src/main/java/com/harithdev/focuslock/
@@ -195,7 +195,7 @@ app/src/main/java/com/harithdev/focuslock/
 
 ---
 
-## 👤 Author
+## Author
 
 **Harith Keshan**
 
