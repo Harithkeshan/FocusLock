@@ -89,7 +89,7 @@ public class AppDetailActivity extends AppCompatActivity {
 
         viewModel.getSaveSuccess().observe(this, anyDelayed -> {
             if (anyDelayed != null) {
-                Toast.makeText(this, "Settings saved ✓", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Settings saved", Toast.LENGTH_LONG).show();
                 finish();
             }
         });

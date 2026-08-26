@@ -185,7 +185,7 @@ public class AppListActivity extends AppCompatActivity {
                 new android.content.ComponentName(this, com.harithdev.focuslock.receiver.FocusLockDeviceAdminReceiver.class);
         boolean isAdmin = dpm != null && dpm.isAdminActive(admin);
 
-        sheetBinding.txtAdminStatus.setText(isAdmin ? "Protected ✓" : "Disabled");
+        sheetBinding.txtAdminStatus.setText(isAdmin ? "Protected" : "Disabled");
         sheetBinding.txtAdminStatus.setTextColor(isAdmin ? 0xFFFFFFFF : 0xFF94A3B8);
         sheetBinding.txtAdminStatus.setBackgroundResource(isAdmin ?
                 com.harithdev.focuslock.R.drawable.bg_chip_active :
@@ -266,7 +266,7 @@ public class AppListActivity extends AppCompatActivity {
         } else if (requestCode == REQUEST_PIN_SETUP) {
             if (resultCode == RESULT_OK) {
                 com.harithdev.focuslock.security.PinManager.setSessionAuthenticated(true);
-                android.widget.Toast.makeText(this, "PIN updated ✓", android.widget.Toast.LENGTH_SHORT).show();
+                android.widget.Toast.makeText(this, "PIN updated", android.widget.Toast.LENGTH_SHORT).show();
             }
         }
     }

@@ -257,7 +257,7 @@ public class PinActivity extends AppCompatActivity {
             PinManager.saveSecurityQuestion(this, selectedQuestion, answer);
             PinManager.setSessionAuthenticated(true);
 
-            android.widget.Toast.makeText(this, "PIN & Security Question saved ✓", android.widget.Toast.LENGTH_SHORT).show();
+            android.widget.Toast.makeText(this, "PIN & Security Question saved", android.widget.Toast.LENGTH_SHORT).show();
             dialog.dismiss();
             setResult(RESULT_OK);
             finish();
@@ -292,7 +292,7 @@ public class PinActivity extends AppCompatActivity {
             if (PinManager.verifySecurityAnswer(this, inputAnswer)) {
                 dialog.dismiss();
                 PinManager.clearPin(this);
-                android.widget.Toast.makeText(this, "Identity verified ✓ Please set a new PIN", android.widget.Toast.LENGTH_LONG).show();
+                android.widget.Toast.makeText(this, "Identity verified. Please set a new PIN", android.widget.Toast.LENGTH_LONG).show();
 
                 mode = MODE_SETUP;
                 firstStepPin = null;
