@@ -43,7 +43,7 @@ Not a generic "App Blocked" wall. FocusLock shows a **different, tailored messag
 |---|---|---|
 | Sleep hours active | *"Sleep hours, phone down!"* | 🌙 Moon |
 | Session slot used up | *"Time's up for this session!"* | ⏱️ Timer |
-| Left app mid-session | *"Good call stepping away!"* | ⏸️ Pause |
+| Exited during cooldown | *"Good call stepping away!"* | ⏸️ Pause |
 | Daily limit reached | *"That's your daily dose!"* | ⏳ Hourglass |
 | All sessions exhausted | *"All sessions done for today!"* | 📊 Sessions |
 
@@ -54,7 +54,7 @@ Block apps entirely during your sleep hours (e.g., 11 PM – 7 AM). Per-app conf
 - **PIN Lock** with security question recovery
 - **Device Admin Protection** to prevent uninstallation
 - **Direction-Aware Enforcement** — making restrictions stricter takes effect immediately; relaxing them only applies the next day (so you can't cheat in the moment)
-- **Early Exit Tracking** — closing an app before your session ends still counts the full slot as used
+- **Early Exit Cooldown** — leaving an app mid-session still triggers a cooldown period before you can return, preventing rapid on-off abuse
 
 ### 🔒 100% Offline & Private
 FocusLock has **zero network permissions**. No data collection, no analytics, no cloud sync. Your usage data never leaves your device — ever.
