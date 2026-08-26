@@ -63,27 +63,7 @@ FocusLock has **zero network permissions**. No data collection, no analytics, no
 
 ## Architecture & Tech Stack
 
-FocusLock is built with a clean, modern Android architecture:
-
-```
-┌─────────────────────────────────────────────┐
-│                    UI Layer                  │
-│  Activities → ViewModels → LiveData → Views │
-├─────────────────────────────────────────────┤
-│               Repository Layer               │
-│         FocusLockRepository (Single          │
-│          source of truth for DAOs)           │
-├─────────────────────────────────────────────┤
-│                Data Layer                    │
-│    Room Database → DAOs → Entity Models     │
-├─────────────────────────────────────────────┤
-│              Service Layer                   │
-│   UsageTrackingService (Foreground)          │
-│   AccessibilityService (Window Detection)   │
-│   MidnightResetWorker (WorkManager)         │
-│   BootReceiver (Survives Reboots)           │
-└─────────────────────────────────────────────┘
-```
+FocusLock is built using standard Android MVVM architecture, utilizing Room for offline persistence, LiveData for reactive UI updates, and background services for reliable enforcement.
 
 | Technology | Purpose |
 |---|---|
@@ -169,29 +149,6 @@ git clone https://github.com/Harithkeshan/FocusLock.git
 ## Design Language
 
 *FocusLock uses a custom dark design system — Neutral Obsidian surfaces with Emerald Green accents — built entirely with Android Vector Drawables and no third-party icon packs.*
-
----
-
-## Project Structure
-
-```
-app/src/main/java/com/harithdev/focuslock/
-├── database/          # Room database, DAOs, entities
-├── receiver/          # Boot receiver, Device Admin receiver
-├── repository/        # Single source of truth (Repository pattern)
-├── security/          # PIN manager, hashing utilities
-├── service/           # Foreground tracking service
-├── ui/
-│   ├── applist/       # App selection & settings bottom sheet
-│   ├── block/         # 5 context-aware block screens
-│   ├── dashboard/     # Usage analytics & bar charts
-│   ├── detail/        # Per-app restriction configuration
-│   ├── onboarding/    # 3-slide intro flow
-│   ├── permission/    # Permission setup wizard
-│   └── pin/           # PIN setup & verification
-├── util/              # Time formatting, category helpers
-└── worker/            # Midnight reset via WorkManager
-```
 
 ---
 
