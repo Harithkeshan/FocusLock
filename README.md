@@ -168,17 +168,7 @@ git clone https://github.com/Harithkeshan/FocusLock.git
 
 ## 🎨 Design Language
 
-FocusLock uses a custom **"Neutral Obsidian + Punchy Emerald"** design system:
-
-| Token | Value | Usage |
-|---|---|---|
-| `surface_bg` | `#0C0E12` | Primary background |
-| `card_bg` | `#14171E` | Card surfaces |
-| `emerald_primary` | `#34D399` | Accent, CTAs, active states |
-| `text_primary` | `#F1F5F9` | Headings & body text |
-| `text_secondary` | `#94A3B8` | Captions & metadata |
-
-All icons are custom-designed Android Vector Drawables — no emoji, no third-party icon packs.
+*FocusLock uses a custom dark design system — Neutral Obsidian surfaces with Emerald Green accents — built entirely with Android Vector Drawables and no third-party icon packs.*
 
 ---
 
