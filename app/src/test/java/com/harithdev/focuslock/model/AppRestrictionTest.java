@@ -5,6 +5,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class AppRestrictionTest {
 
@@ -64,5 +65,59 @@ public class AppRestrictionTest {
         restriction.enforcedSessionCount = 6;
 
         assertEquals(20, restriction.getEnforcedSlotDurationMinutes());
+    }
+
+    @Test
+    public void testHasPendingChanges_noSyncDate() {
+        AppRestriction restriction = new AppRestriction("com.test.app", "Test App");
+        restriction.lastEnforcedSyncDate = null;
+        restriction.dailyLimitMinutes = 120;
+        restriction.enforcedDailyLimitMinutes = 60;
+        // Without initial sync, no pending changes should be flagged
+        assertFalse(restriction.hasPendingChanges());
+    }
+
+    @Test
+    public void testHasPendingChanges_identicalValues() {
+        AppRestriction restriction = new AppRestriction("com.test.app", "Test App");
+        restriction.lastEnforcedSyncDate = "2026-09-16";
+        restriction.dailyLimitMinutes = 60;
+        restriction.enforcedDailyLimitMinutes = 60;
+        restriction.sessionCount = 4;
+        restriction.enforcedSessionCount = 4;
+        restriction.cooldownMinutes = 40;
+        restriction.enforcedCooldownMinutes = 40;
+
+        assertFalse(restriction.hasPendingChanges());
+    }
+
+    @Test
+    public void testHasPendingChanges_dailyLimitRelaxed() {
+        AppRestriction restriction = new AppRestriction("com.test.app", "Test App");
+        restriction.lastEnforcedSyncDate = "2026-09-16";
+        restriction.dailyLimitMinutes = 90;
+        restriction.enforcedDailyLimitMinutes = 60;
+
+        assertTrue(restriction.hasPendingChanges());
+    }
+
+    @Test
+    public void testHasPendingChanges_sessionCountRelaxed() {
+        AppRestriction restriction = new AppRestriction("com.test.app", "Test App");
+        restriction.lastEnforcedSyncDate = "2026-09-16";
+        restriction.sessionCount = 2;
+        restriction.enforcedSessionCount = 4;
+
+        assertTrue(restriction.hasPendingChanges());
+    }
+
+    @Test
+    public void testHasPendingChanges_cooldownRelaxed() {
+        AppRestriction restriction = new AppRestriction("com.test.app", "Test App");
+        restriction.lastEnforcedSyncDate = "2026-09-16";
+        restriction.cooldownMinutes = 30;
+        restriction.enforcedCooldownMinutes = 50;
+
+        assertTrue(restriction.hasPendingChanges());
     }
 }

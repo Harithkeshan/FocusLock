@@ -137,10 +137,93 @@ public class UsageCalculator {
                                                            java.util.List<com.harithdev.focuslock.model.AppRestriction> restrictions,
                                                            String dateStr) {
         if (restrictions == null || restrictions.isEmpty()) return 0;
-        long totalMs = 0;
+        java.util.Set<String> pkgs = new java.util.HashSet<>();
         for (com.harithdev.focuslock.model.AppRestriction app : restrictions) {
-            totalMs += getScreenTimeForDate(context, app.packageName, dateStr);
+            if (app.packageName != null) pkgs.add(app.packageName);
         }
-        return totalMs;
+        return getTotalRestrictedScreenTimeForDateBatch(context, pkgs, dateStr);
+    }
+
+    /**
+     * Efficient single-pass calculation for a batch of restricted apps on a specific date.
+     * Queries UsageStatsManager ONCE for the entire day rather than once per app,
+     * reducing query time from O(N) to O(1) for that day.
+     */
+    public static long getTotalRestrictedScreenTimeForDateBatch(Context context,
+                                                                java.util.Set<String> restrictedPackages,
+                                                                String dateStr) {
+        if (context == null || restrictedPackages == null || restrictedPackages.isEmpty() || dateStr == null) {
+            return 0;
+        }
+
+        try {
+            UsageStatsManager usm = (UsageStatsManager)
+                    context.getSystemService(Context.USAGE_STATS_SERVICE);
+            if (usm == null) return 0;
+
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+            java.util.Date date = sdf.parse(dateStr);
+            if (date == null) return 0;
+
+            Calendar startCal = Calendar.getInstance();
+            startCal.setTime(date);
+            startCal.set(Calendar.HOUR_OF_DAY, 0);
+            startCal.set(Calendar.MINUTE, 0);
+            startCal.set(Calendar.SECOND, 0);
+            startCal.set(Calendar.MILLISECOND, 0);
+            long startTime = startCal.getTimeInMillis();
+
+            Calendar endCal = Calendar.getInstance();
+            endCal.setTime(date);
+            endCal.set(Calendar.HOUR_OF_DAY, 23);
+            endCal.set(Calendar.MINUTE, 59);
+            endCal.set(Calendar.SECOND, 59);
+            endCal.set(Calendar.MILLISECOND, 999);
+            long endTime = Math.min(endCal.getTimeInMillis(), System.currentTimeMillis());
+
+            if (startTime > System.currentTimeMillis()) return 0;
+
+            UsageEvents events = usm.queryEvents(startTime, endTime);
+            if (events == null) return 0;
+
+            UsageEvents.Event event = new UsageEvents.Event();
+            java.util.Map<String, Long> lastResumedMap = new java.util.HashMap<>();
+            long totalScreenTimeMs = 0;
+            boolean isToday = dateStr.equals(TimeUtils.todayString());
+            long now = System.currentTimeMillis();
+
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event);
+                String pkg = event.getPackageName();
+                if (pkg == null || !restrictedPackages.contains(pkg)) continue;
+
+                int type = event.getEventType();
+                if (type == ACTIVITY_RESUMED) {
+                    lastResumedMap.put(pkg, event.getTimeStamp());
+                } else if (type == ACTIVITY_PAUSED) {
+                    Long lastResumed = lastResumedMap.get(pkg);
+                    if (lastResumed != null && lastResumed > 0) {
+                        long sessionMs = event.getTimeStamp() - lastResumed;
+                        if (sessionMs > 0 && sessionMs < 24 * 60 * 60 * 1000L) {
+                            totalScreenTimeMs += sessionMs;
+                        }
+                        lastResumedMap.remove(pkg);
+                    }
+                }
+            }
+
+            // If an app is still in foreground today
+            if (isToday) {
+                for (Long lastResumed : lastResumedMap.values()) {
+                    if (lastResumed != null && lastResumed > 0) {
+                        totalScreenTimeMs += (now - lastResumed);
+                    }
+                }
+            }
+
+            return totalScreenTimeMs;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 }

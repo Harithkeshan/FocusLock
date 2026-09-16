@@ -37,6 +37,11 @@ public class DashboardActivity extends AppCompatActivity {
 
         setupChips();
         setupRecyclerView();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
         loadDashboardData();
     }
 
@@ -88,10 +93,15 @@ public class DashboardActivity extends AppCompatActivity {
             Collections.sort(usageItems, (a, b) -> Long.compare(b.usedMs, a.usedMs));
 
             final long finalTotalMs = totalTodayMs;
+            final int blocksToday = com.harithdev.focuslock.util.BlockTracker.getBlocksToday(this);
+
             runOnUiThread(() -> {
                 long totalMins = finalTotalMs / 60_000L;
                 binding.txtTodayTotal.setText(formatTimeLarge(totalMins));
-                binding.txtTodaySub.setText(restrictions.size() + " restricted apps tracked today");
+                binding.txtTodaySub.setText(restrictions.size() + (restrictions.size() == 1 ? " app tracked" : " apps tracked"));
+
+                binding.txtTodayBlocks.setText(String.valueOf(blocksToday));
+                binding.txtBlocksSub.setText(blocksToday == 1 ? "impulse open saved" : "impulse opens saved");
 
                 if (usageItems.isEmpty()) {
                     binding.rvAppUsage.setVisibility(View.GONE);
@@ -117,8 +127,8 @@ public class DashboardActivity extends AppCompatActivity {
     private void loadChartDataInternal(FocusLockDatabase db) {
         List<AppRestriction> restrictions = db.appRestrictionDao().getActiveRestrictions();
 
-        // Query exact daily usage directly from system UsageStatsManager for all days
-        List<DailySummary> fullSequence = buildFullDateSequenceFromSystem(selectedDays, restrictions);
+        // Query optimized daily sequence using Room usage_history cache + single-pass batch
+        List<DailySummary> fullSequence = buildFullDateSequenceFromSystem(selectedDays, restrictions, db);
 
         long totalSumMs = 0;
         boolean hasAnyUsage = false;
@@ -138,17 +148,43 @@ public class DashboardActivity extends AppCompatActivity {
         });
     }
 
-    private List<DailySummary> buildFullDateSequenceFromSystem(int days, List<AppRestriction> restrictions) {
+    private List<DailySummary> buildFullDateSequenceFromSystem(int days, List<AppRestriction> restrictions, FocusLockDatabase db) {
         List<DailySummary> result = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         Calendar cal = Calendar.getInstance();
 
         // Build list from (days - 1) days ago to today
         cal.add(Calendar.DATE, -(days - 1));
+        String startDateStr = sdf.format(cal.getTime());
+        String todayStr = TimeUtils.todayString();
 
+        // 1. Fetch cached daily summaries from Room DB for historical days (< 5ms)
+        List<DailySummary> cachedSummaries = db.usageHistoryDao().getDailySummaries(startDateStr);
+        java.util.Map<String, Long> historyMap = new java.util.HashMap<>();
+        if (cachedSummaries != null) {
+            for (DailySummary s : cachedSummaries) {
+                if (s.date != null) historyMap.put(s.date, s.totalUsedMs);
+            }
+        }
+
+        // Package set for batch calculation
+        java.util.Set<String> pkgSet = new java.util.HashSet<>();
+        if (restrictions != null) {
+            for (AppRestriction r : restrictions) {
+                if (r.packageName != null) pkgSet.add(r.packageName);
+            }
+        }
+
+        // 2. Build full sequence
         for (int i = 0; i < days; i++) {
             String dateStr = sdf.format(cal.getTime());
-            long usedMs = UsageCalculator.getTotalRestrictedScreenTimeForDate(this, restrictions, dateStr);
+            long usedMs;
+
+            if (historyMap.containsKey(dateStr) && !dateStr.equals(todayStr)) {
+                usedMs = historyMap.get(dateStr);
+            } else {
+                usedMs = UsageCalculator.getTotalRestrictedScreenTimeForDateBatch(this, pkgSet, dateStr);
+            }
 
             result.add(new DailySummary(dateStr, usedMs));
             cal.add(Calendar.DATE, 1);

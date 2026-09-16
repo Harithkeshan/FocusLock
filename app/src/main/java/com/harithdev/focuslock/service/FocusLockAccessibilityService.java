@@ -542,6 +542,7 @@ public class FocusLockAccessibilityService extends AccessibilityService {
 
     public void showBlock(String pkg, String reason,
                            String sleepEnd, long cooldownEndsMs, int sessionCount) {
+        com.harithdev.focuslock.util.BlockTracker.recordBlock(this);
         Intent intent = new Intent(this, BlockActivity.class);
         intent.putExtra(BlockActivity.EXTRA_PACKAGE,         pkg);
         intent.putExtra(BlockActivity.EXTRA_REASON,          reason);

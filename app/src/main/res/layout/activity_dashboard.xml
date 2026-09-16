@@ -45,38 +45,105 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:orientation="horizontal"
             android:background="@drawable/bg_card"
             android:padding="20dp"
+            android:baselineAligned="false"
             android:layout_marginBottom="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Stat 1: Today Screen Time -->
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="TODAY'S SCREEN TIME"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="#94A3B8"
-                android:letterSpacing="0.05" />
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/txt_today_total"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0h 0m"
-                android:textSize="36sp"
-                android:textStyle="bold"
-                android:textColor="#ffffff"
-                android:layout_marginTop="4dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SCREEN TIME"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="#94A3B8"
+                    android:letterSpacing="0.05" />
 
-            <TextView
-                android:id="@+id/txt_today_sub"
-                android:layout_width="wrap_content"
+                <TextView
+                    android:id="@+id/txt_today_total"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0h 0m"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:textColor="#ffffff"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/txt_today_sub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 apps tracked"
+                    android:textSize="12sp"
+                    android:textColor="#34d399"
+                    android:layout_marginTop="4dp" />
+
+            </LinearLayout>
+
+            <!-- Vertical Divider -->
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:layout_marginHorizontal="16dp"
+                android:background="@color/surface_grid" />
+
+            <!-- Stat 2: Blocks Intercepted -->
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="0 restricted apps tracked today"
-                android:textSize="13sp"
-                android:textColor="#34d399"
-                android:layout_marginTop="4dp" />
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="BLOCKED"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="#94A3B8"
+                        android:letterSpacing="0.05" />
+
+                    <ImageView
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:src="@drawable/ic_security_shield"
+                        android:layout_marginStart="4dp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txt_today_blocks"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:textColor="#ffffff"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/txt_blocks_sub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="impulse opens saved"
+                    android:textSize="12sp"
+                    android:textColor="#34d399"
+                    android:layout_marginTop="4dp" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

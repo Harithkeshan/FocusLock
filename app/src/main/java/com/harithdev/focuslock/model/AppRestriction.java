@@ -108,4 +108,14 @@ public class AppRestriction {
         if (!splitSessions || enforcedSessionCount <= 0) return enforcedDailyLimitMinutes;
         return enforcedDailyLimitMinutes / enforcedSessionCount;
     }
+
+    /**
+     * Returns true if there are relaxed limits pending midnight activation.
+     */
+    public boolean hasPendingChanges() {
+        if (lastEnforcedSyncDate == null) return false;
+        return (dailyLimitMinutes > enforcedDailyLimitMinutes)
+                || (sessionCount < enforcedSessionCount)
+                || (cooldownMinutes < enforcedCooldownMinutes);
+    }
 }

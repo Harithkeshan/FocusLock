@@ -141,6 +141,7 @@ public class AppDetailActivity extends AppCompatActivity {
         binding.seekbarCooldown.setProgress(cooldownMinutes - 40); // offset: min=40
         updateCooldownLabel(cooldownMinutes);
         updateSlotPreview();
+        updatePendingChangesBanner();
     }
 
     // ── Click listeners ───────────────────────────────────────
@@ -440,6 +441,40 @@ public class AppDetailActivity extends AppCompatActivity {
         if (mins < 60) return mins + " min";
         if (mins % 60 == 0) return (mins / 60) + "h";
         return (mins / 60) + "h " + (mins % 60) + "m";
+    }
+
+    private void updatePendingChangesBanner() {
+        if (restriction == null || !restriction.hasPendingChanges()) {
+            binding.cardPendingChanges.setVisibility(View.GONE);
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        if (restriction.dailyLimitMinutes > restriction.enforcedDailyLimitMinutes) {
+            sb.append("• Daily limit: ").append(formatMins(restriction.dailyLimitMinutes))
+                    .append(" scheduled for tomorrow (Active today: ")
+                    .append(formatMins(restriction.enforcedDailyLimitMinutes)).append(")\n");
+        }
+
+        if (restriction.sessionCount < restriction.enforcedSessionCount) {
+            sb.append("• Sessions: ").append(restriction.sessionCount)
+                    .append(" scheduled for tomorrow (Active today: ")
+                    .append(restriction.enforcedSessionCount).append(")\n");
+        }
+
+        if (restriction.cooldownMinutes < restriction.enforcedCooldownMinutes) {
+            sb.append("• Cooldown: ").append(restriction.cooldownMinutes).append(" min")
+                    .append(" scheduled for tomorrow (Active today: ")
+                    .append(restriction.enforcedCooldownMinutes).append(" min)\n");
+        }
+
+        String details = sb.toString().trim();
+        if (!details.isEmpty()) {
+            binding.txtPendingDetails.setText(details);
+            binding.cardPendingChanges.setVisibility(View.VISIBLE);
+        } else {
+            binding.cardPendingChanges.setVisibility(View.GONE);
+        }
     }
 
     private void showDelayedChangesDialog(String message) {

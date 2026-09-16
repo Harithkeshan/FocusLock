@@ -63,6 +63,13 @@ public class AppUsageAdapter extends RecyclerView.Adapter<AppUsageAdapter.UsageV
         holder.binding.txtUsagePercentage.setText(percentage + "%");
         holder.binding.progressAppUsage.setMax(100);
         holder.binding.progressAppUsage.setProgress(percentage);
+
+        holder.itemView.setOnClickListener(v -> {
+            android.content.Intent intent = new android.content.Intent(context, com.harithdev.focuslock.ui.detail.AppDetailActivity.class);
+            intent.putExtra("packageName", item.restriction.packageName);
+            intent.putExtra("appName", item.restriction.appName);
+            context.startActivity(intent);
+        });
     }
 
     private String formatTime(long minutes) {
